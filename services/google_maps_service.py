@@ -1,89 +1,17 @@
-# services/google_maps_service.py
-
 import requests
-import re
-from bs4 import BeautifulSoup
-import urllib3
+import os
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from dotenv import load_dotenv
 
-GOOGLE_API_KEY = "AIzaSyAsUyVuTHPgQ-8OR8DvYLyGbbxDkkiShP8"
+from services.scraper_service import extract_emails_from_website
 
+load_dotenv()
 
-def extract_emails_from_website(url):
+GOOGLE_API_KEY = os.getenv(
+    "GOOGLE_MAPS_API_KEY"
+)
 
-    emails_found = []
-
-    try:
-
-        pages_to_try = [
-            "",
-            "/contacto",
-            "/contact",
-            "/nosotros",
-            "/about",
-            "/admisiones"
-        ]
-
-        headers = {
-            "User-Agent": "Mozilla/5.0"
-        }
-
-        for page in pages_to_try:
-
-            full_url = url.rstrip("/") + page
-
-            try:
-
-                response = requests.get(
-                    full_url,
-                    headers=headers,
-                    timeout=5,
-                    verify=False
-                )
-
-                html = response.text
-
-                emails = re.findall(
-                    r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-                    html
-                )
-
-                clean_emails = []
-
-                for email in emails:
-
-                    email = email.lower()
-
-                    # FILTROS IMPORTANTES
-                    if "error message" in email:
-                        continue
-
-                    if "colombiahosting" in email:
-                        continue
-
-                    if "?" in email:
-                        continue
-
-                    if "example.com" in email:
-                        continue
-
-                    clean_emails.append(email)
-
-                emails_found.extend(clean_emails)
-
-            except Exception as e:
-                print("SCRAPER ERROR:", full_url, e)
-                continue
-
-        return list(set(emails_found))
-
-    except Exception as e:
-        print("GENERAL SCRAPER ERROR:", e)
-        return []
-
-
-def search_places(query):
+def search_places(query, page_token=None):
 
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
 
@@ -91,6 +19,9 @@ def search_places(query):
         "query": query,
         "key": GOOGLE_API_KEY
     }
+
+    if page_token:
+        params["pagetoken"] = page_token
 
     response = requests.get(
         url,
@@ -100,29 +31,45 @@ def search_places(query):
 
     data = response.json()
 
+    print("GOOGLE RESPONSE:")
+    print(data)
+
     results = data.get("results", [])
+
+    next_page_token = data.get(
+        "next_page_token"
+    )
 
     final_results = []
 
-    # LIMITAR RESULTADOS
     for place in results[:5]:
-
-        name = place.get("name")
-        address = place.get("formatted_address")
-        rating = place.get("rating")
-        location = place.get("geometry", {}).get("location", {})
-
-        lat = location.get("lat")
-        lng = location.get("lng")
-
-        website = None
-        emails = []
 
         try:
 
+            name = place.get("name")
+
+            address = place.get(
+                "formatted_address"
+            )
+
+            rating = place.get("rating")
+
+            location = (
+                place.get("geometry", {})
+                .get("location", {})
+            )
+
+            lat = location.get("lat")
+            lng = location.get("lng")
+
+            website = None
+            emails = []
+
             place_id = place.get("place_id")
 
-            details_url = "https://maps.googleapis.com/maps/api/place/details/json"
+            details_url = (
+                "https://maps.googleapis.com/maps/api/place/details/json"
+            )
 
             details_params = {
                 "place_id": place_id,
@@ -146,42 +93,38 @@ def search_places(query):
 
             if website:
 
-                # FILTRO SITIOS MALOS
-                bad_sites = [
+                blocked_sites = [
                     "facebook.com",
                     "instagram.com",
+                    "youtube.com",
                     "wixsite.com",
-                    "jimdo",
-                    "youtube.com"
+                    "jimdo"
                 ]
 
-                if any(site in website for site in bad_sites):
-                    website = None
-
-                else:
-
-                    print("==========================")
-                    print("WEB:", website)
+                if not any(
+                    bad in website
+                    for bad in blocked_sites
+                ):
 
                     emails = extract_emails_from_website(
                         website
                     )
 
-                    print("EMAILS ENCONTRADOS:", emails)
+            final_results.append({
+                "name": name,
+                "address": address,
+                "rating": rating,
+                "lat": lat,
+                "lng": lng,
+                "website": website,
+                "emails": emails
+            })
 
         except Exception as e:
-            print("DETAILS ERROR:", e)
 
-        final_results.append({
-            "name": name,
-            "address": address,
-            "rating": rating,
-            "lat": lat,
-            "lng": lng,
-            "website": website,
-            "emails": emails
-        })
+            print("PLACE ERROR:", e)
 
     return {
-        "results": final_results
+        "results": final_results,
+        "next_page_token": next_page_token
     }

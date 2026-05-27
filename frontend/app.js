@@ -1,277 +1,293 @@
 let map;
 let markers = [];
-let lastPlaces = [];
+let nextPageToken = null;
 
+// ===============================
+// INICIAR MAPA
+// ===============================
 function initMap() {
 
     map = new google.maps.Map(document.getElementById("map"), {
-
-        center: {
-            lat: 4.7110,
-            lng: -74.0721
-        },
-
-        zoom: 11
+        center: { lat: 4.7110, lng: -74.0721 },
+        zoom: 8,
     });
+
 }
 
-async function searchPlaces() {
+// ===============================
+// LIMPIAR MARCADORES
+// ===============================
+function clearMarkers() {
 
-    const input = document.getElementById("searchInput");
+    markers.forEach(marker => marker.setMap(null));
 
-    if (!input) {
-        alert("No existe el input searchInput");
+    markers = [];
+
+}
+
+// ===============================
+// BUSCAR LUGARES
+// ===============================
+async function searchPlaces(loadMore = false) {
+
+    const queryInput = document.getElementById("searchInput");
+
+    if (!queryInput) {
+        console.error("No existe el input #searchInput");
         return;
     }
 
-    const query = input.value;
+    const query = queryInput.value.trim();
 
     if (!query) {
-
         alert("Escribe una búsqueda");
         return;
     }
 
-    const resultsDiv = document.getElementById("results");
-
-    resultsDiv.innerHTML = `
-        <div class="loading">
-            Buscando lugares...
-        </div>
-    `;
-
     try {
 
-        const response = await fetch(
-            `https://geo-ai-agent.onrender.com/search?query=${encodeURIComponent(query)}`
-            
-        );
+        // loader opcional
+        const resultsContainer = document.getElementById("results");
+
+        if (!loadMore) {
+
+            resultsContainer.innerHTML = `
+                <p>Buscando lugares...</p>
+            `;
+
+            clearMarkers();
+
+        }
+
+        // ===============================
+        // URL BACKEND
+        // ===============================
+        let url = `https://geo-ai-agent.onrender.com/search?query=${encodeURIComponent(query)}`;
+
+        // PAGINACIÓN
+        if (loadMore && nextPageToken) {
+            url += `&page_token=${nextPageToken}`;
+        }
+
+        // ===============================
+        // FETCH
+        // ===============================
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
 
         const data = await response.json();
 
         console.log("RESPUESTA:", data);
 
-        // LIMPIAR MAPA
-        markers.forEach(marker => marker.setMap(null));
-
-        markers = [];
-
-        resultsDiv.innerHTML = "";
-
-        // OBTENER RESULTS
-        let places = [];
-
-        if (data.places && data.places.results) {
-
-            places = data.places.results;
-
-        } else if (data.results) {
-
-            places = data.results;
-        }
+        // ===============================
+        // PLACES
+        // ===============================
+        const places = data.places.results || [];
 
         console.log("PLACES:", places);
 
-        // GUARDAR PARA DESCARGA
-        lastPlaces = places;
+        // guardar token
+        nextPageToken = data.places.next_page_token || null;
 
-        if (!places.length) {
+        // limpiar solo si NO es cargar más
+        if (!loadMore) {
+            resultsContainer.innerHTML = "";
+        }
 
-            resultsDiv.innerHTML = `
-                <div class="no-results">
-                    No se encontraron resultados
-                </div>
+        // ===============================
+        // SI NO HAY RESULTADOS
+        // ===============================
+        if (places.length === 0 && !loadMore) {
+
+            resultsContainer.innerHTML = `
+                <p>No se encontraron resultados.</p>
             `;
 
             return;
+
         }
 
-        const bounds = new google.maps.LatLngBounds();
-
+        // ===============================
+        // RECORRER LUGARES
+        // ===============================
         places.forEach(place => {
 
-            if (
-                place.lat === undefined ||
-                place.lng === undefined
-            ) {
-                return;
-            }
+            // ===============================
+            // DATOS
+            // ===============================
+            const name = place.name || "Sin nombre";
 
-            // MAPA
-            const marker = new google.maps.Marker({
+            const address = place.address || "Sin dirección";
 
-                position: {
-                    lat: place.lat,
-                    lng: place.lng
-                },
+            const phone = place.phone || "Sin teléfono";
 
-                map: map,
+            const website = place.website || "Sin sitio web";
 
-                title: place.name
-            });
+            const emails = place.emails?.length
+                ? place.emails.join(", ")
+                : "Sin emails";
 
-            markers.push(marker);
+            const lat = place.location?.lat;
+            const lng = place.location?.lng;
 
-            bounds.extend({
-                lat: place.lat,
-                lng: place.lng
-            });
-
-            // EMAILS
-            let emailsHTML = "";
-
-            if (place.emails && place.emails.length > 0) {
-
-                emailsHTML = `
-                    <div class="emails">
-                        <strong>✉️ Correos:</strong><br>
-                        ${place.emails.join("<br>")}
-                    </div>
-                `;
-            }
-
-            // TELÉFONOS
-            let phonesHTML = "";
-
-            if (place.phones && place.phones.length > 0) {
-
-                phonesHTML = `
-                    <div class="phones">
-                        <strong>📞 Teléfonos:</strong><br>
-                        ${place.phones.join("<br>")}
-                    </div>
-                `;
-            }
-
-            // WEBSITE
-            let websiteHTML = "";
-
-            if (place.website) {
-
-                websiteHTML = `
-                    <p>
-                        🌐
-                        <a href="${place.website}" target="_blank">
-                            Sitio Web
-                        </a>
-                    </p>
-                `;
-            }
-
-            // CARD
+            // ===============================
+            // CARD HTML
+            // ===============================
             const card = document.createElement("div");
 
             card.className = "place-card";
 
             card.innerHTML = `
+                <h3>${name}</h3>
 
-                <h3>${place.name || "Sin nombre"}</h3>
+                <p><strong>Dirección:</strong><br>${address}</p>
 
-                ${place.rating ? `
-                    <p>⭐ ${place.rating}</p>
-                ` : ""}
+                <p><strong>Teléfono:</strong><br>${phone}</p>
 
-                ${place.address ? `
-                    <p>📍 ${place.address}</p>
-                ` : ""}
+                <p>
+                    <strong>Sitio Web:</strong><br>
+                    <a href="${website}" target="_blank">
+                        ${website}
+                    </a>
+                </p>
 
-                ${websiteHTML}
-
-                ${phonesHTML}
-
-                ${emailsHTML}
-
+                <p><strong>Emails:</strong><br>${emails}</p>
             `;
 
-            card.addEventListener("click", () => {
+            resultsContainer.appendChild(card);
 
-                map.panTo({
-                    lat: place.lat,
-                    lng: place.lng
+            // ===============================
+            // MAPA
+            // ===============================
+            if (lat && lng) {
+
+                const marker = new google.maps.Marker({
+                    position: { lat, lng },
+                    map,
+                    title: name,
                 });
 
-                map.setZoom(16);
-            });
+                markers.push(marker);
 
-            resultsDiv.appendChild(card);
+            }
+
         });
 
-        map.fitBounds(bounds);
+        // ===============================
+        // MOSTRAR ANALISIS IA
+        // ===============================
+        if (!loadMore && data.analysis) {
+
+            const analysisDiv = document.getElementById("analysis");
+
+            if (analysisDiv) {
+
+                analysisDiv.innerHTML = `
+                    <h2>Análisis IA</h2>
+                    <p>${data.analysis}</p>
+                `;
+
+            }
+
+        }
+
+        // ===============================
+        // BOTÓN CARGAR MÁS
+        // ===============================
+        const loadMoreBtn = document.getElementById("loadMoreBtn");
+
+        if (nextPageToken) {
+
+            loadMoreBtn.style.display = "block";
+
+        } else {
+
+            loadMoreBtn.style.display = "none";
+
+        }
 
     } catch (error) {
 
         console.error(error);
 
-        resultsDiv.innerHTML = `
-            <div class="error">
-                Error conectando con backend
-            </div>
+        const resultsContainer = document.getElementById("results");
+
+        resultsContainer.innerHTML = `
+            <p>Error al buscar resultados.</p>
         `;
+
     }
+
 }
 
-
-// DESCARGAR CSV
+// ===============================
+// EXPORTAR CSV
+// ===============================
 function downloadCSV() {
 
-    if (!lastPlaces.length) {
+    const cards = document.querySelectorAll(".place-card");
 
-        alert("No hay datos para descargar");
+    if (cards.length === 0) {
+        alert("No hay resultados para descargar");
         return;
     }
 
-    let csv = "Nombre,Direccion,Website,Telefonos,Emails,Rating\n";
+    let csv = "Nombre,Direccion,Telefono,Website,Emails\n";
 
-    lastPlaces.forEach(place => {
+    cards.forEach(card => {
 
-        const row = [
+        const lines = card.innerText.split("\n");
 
-            `"${place.name || ""}"`,
-            `"${place.address || ""}"`,
-            `"${place.website || ""}"`,
-            `"${(place.phones || []).join(" | ")}"`,
-            `"${(place.emails || []).join(" | ")}"`,
-            `"${place.rating || ""}"`
+        const nombre = lines[0] || "";
 
-        ].join(",");
+        const direccion = lines[2] || "";
 
-        csv += row + "\n";
+        const telefono = lines[4] || "";
+
+        const website = lines[6] || "";
+
+        const emails = lines[8] || "";
+
+        csv += `"${nombre}","${direccion}","${telefono}","${website}","${emails}"\n`;
+
     });
 
-    const blob = new Blob([csv], {
-        type: "text/csv;charset=utf-8;"
-    });
+    const blob = new Blob([csv], { type: "text/csv" });
 
-    const link = document.createElement("a");
+    const url = window.URL.createObjectURL(blob);
 
-    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
 
-    link.setAttribute("href", url);
+    a.href = url;
 
-    link.setAttribute("download", "resultados.csv");
+    a.download = "resultados.csv";
 
-    document.body.appendChild(link);
+    a.click();
 
-    link.click();
+    window.URL.revokeObjectURL(url);
 
-    document.body.removeChild(link);
 }
 
-
-// ENTER
+// ===============================
+// ENTER PARA BUSCAR
+// ===============================
 document.addEventListener("DOMContentLoaded", () => {
 
     const input = document.getElementById("searchInput");
 
     if (input) {
 
-        input.addEventListener("keypress", function (e) {
+        input.addEventListener("keypress", (e) => {
 
             if (e.key === "Enter") {
-
                 searchPlaces();
             }
-        });
-    }
-});
 
+        });
+
+    }
+
+});

@@ -1,5 +1,3 @@
-# main.py
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,29 +13,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/")
-def root():
-
+def home():
     return {
-        "status": "API funcionando correctamente"
+        "status": "ok"
     }
 
-
 @app.get("/search")
-def search(query: str):
+def search(query: str, page_token: str = None):
 
-    try:
+    result = ask_agent(query, page_token)
 
-        result = ask_agent(query)
-
-        return result
-
-    except Exception as e:
-
-        print("SEARCH ERROR:", e)
-
-        return {
-            "error": str(e)
-        }
-    
+    return result

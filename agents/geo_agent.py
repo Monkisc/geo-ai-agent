@@ -1,5 +1,3 @@
-# agents/geo_agent.py
-
 from google import genai
 import os
 from dotenv import load_dotenv
@@ -12,25 +10,23 @@ client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
 
+def ask_agent(user_query, page_token=None):
 
-def ask_agent(user_query):
-
-    places = search_places(user_query)
-
-    # LIMITAR TEXTO PARA GEMINI
-    places_text = str(places)[:3000]
+    places = search_places(
+        user_query,
+        page_token
+    )
 
     prompt = f"""
-    El usuario buscó:
+    El usuario pidió:
 
     {user_query}
 
-    Estos son algunos resultados encontrados:
+    Estos son los resultados encontrados:
 
-    {places_text}
+    {places}
 
-    Resume la información de forma clara,
-    útil y organizada.
+    Analiza los resultados y responde corto y útil.
     """
 
     try:
@@ -46,7 +42,7 @@ def ask_agent(user_query):
 
         print("GEMINI ERROR:", e)
 
-        analysis = "No fue posible generar el análisis."
+        analysis = "No se pudo generar análisis IA."
 
     return {
         "places": places,
