@@ -108,15 +108,18 @@ function renderPlaces() {
     // ===============================
     const loadMoreBtn = document.getElementById("loadMoreBtn");
 
-    if (end < allPlaces.length) {
+    // mostrar botón si hay más ocultos
+// O si Google tiene más páginas
+if (end < allPlaces.length || nextPageToken) {
 
-        loadMoreBtn.style.display = "block";
+    loadMoreBtn.style.display = "block";
 
-    } else {
+} else {
 
-        loadMoreBtn.style.display = "none";
+    loadMoreBtn.style.display = "none";
 
-    }
+}
+
 
 }
 
