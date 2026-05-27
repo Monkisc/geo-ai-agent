@@ -1,3 +1,5 @@
+# main.py
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,7 +7,6 @@ from agents.geo_agent import ask_agent
 
 app = FastAPI()
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,17 +15,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
-def home():
+def root():
 
     return {
-        "status": "ok",
-        "message": "Geo AI Agent funcionando 🚀"
+        "status": "API funcionando correctamente"
     }
+
 
 @app.get("/search")
 def search(query: str):
 
-    result = ask_agent(query)
+    try:
 
-    return result
+        result = ask_agent(query)
+
+        return result
+
+    except Exception as e:
+
+        print("SEARCH ERROR:", e)
+
+        return {
+            "error": str(e)
+        }
+    
