@@ -103,6 +103,31 @@
             text-decoration:none;
         }
 
+        #downloadBtn{
+            width:100%;
+            margin-bottom:15px;
+            padding:12px;
+            border:none;
+            background:#34A853;
+            color:white;
+            border-radius:10px;
+            cursor:pointer;
+            font-weight:bold;
+        }
+
+        #loadMoreBtn{
+            width:100%;
+            margin-top:15px;
+            padding:12px;
+            border:none;
+            background:#4285F4;
+            color:white;
+            border-radius:10px;
+            cursor:pointer;
+            font-weight:bold;
+            display:none;
+        }
+
     </style>
 
 </head>
@@ -122,18 +147,21 @@
             <button onclick="searchPlaces()">
                 Buscar
             </button>
-            <button onclick="loadMorePlaces()">
-    Cargar más
-</button>
 
         </div>
 
         <button id="downloadBtn" onclick="downloadCSV()">
-    Descargar CSV
-</button>
+            Descargar CSV
+        </button>
 
-<div id="results"></div>
+        <div id="results"></div>
 
+        <button
+            id="loadMoreBtn"
+            onclick="loadMorePlaces()"
+        >
+            Cargar más
+        </button>
 
     </div>
 
