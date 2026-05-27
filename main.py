@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from agents.geo_agent import ask_agent
 
 app = FastAPI()
@@ -15,10 +14,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-
-    return {
-        "status": "Geo AI Agent funcionando"
-    }
+    return {"status": "ok"}
 
 @app.get("/search")
 def search(query: str, page_token: str = None):
@@ -27,3 +23,4 @@ def search(query: str, page_token: str = None):
 
     return result
 
+    

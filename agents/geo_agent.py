@@ -19,29 +19,19 @@ def ask_agent(user_query, page_token=None):
 
     {user_query}
 
-    Estos son algunos resultados encontrados:
+    Estos son los resultados encontrados:
 
     {places.get("results", [])[:5]}
 
-    Analiza los resultados de forma breve y útil.
+    Analiza brevemente los resultados.
     """
 
-    analysis = ""
-
-    try:
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
-
-        analysis = response.text
-
-    except Exception as e:
-
-        analysis = f"Error IA: {str(e)}"
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
+    )
 
     return {
         "places": places,
-        "analysis": analysis
+        "analysis": response.text
     }

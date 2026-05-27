@@ -2,14 +2,19 @@ let map;
 let markers = [];
 let nextPageToken = null;
 
+let allPlaces = [];
+let currentPage = 1;
+
+const placesPerPage = 5;
+
+// ===============================
+// INICIAR MAPA
+// ===============================
 function initMap() {
 
     map = new google.maps.Map(document.getElementById("map"), {
-
         center: { lat: 4.7110, lng: -74.0721 },
-
-        zoom: 10,
-
+        zoom: 8,
     });
 
 }
@@ -26,188 +31,178 @@ function clearMarkers() {
 }
 
 // ===============================
-// BUSCAR
+// RENDERIZAR RESULTADOS
+// ===============================
+function renderPlaces() {
+
+    const resultsContainer = document.getElementById("results");
+
+    resultsContainer.innerHTML = "";
+
+    const end = currentPage * placesPerPage;
+
+    const visiblePlaces = allPlaces.slice(0, end);
+
+    visiblePlaces.forEach(place => {
+
+        const name = place.name || "Sin nombre";
+
+        const address = place.address || "Sin dirección";
+
+        const phone = place.phone || "Sin teléfono";
+
+        const website = place.website || "Sin sitio web";
+
+        const emails = place.emails?.length
+            ? place.emails.join(", ")
+            : "Sin emails";
+
+        const lat = place.location?.lat;
+        const lng = place.location?.lng;
+
+        // ===============================
+        // CARD
+        // ===============================
+        const card = document.createElement("div");
+
+        card.className = "place-card";
+
+        card.innerHTML = `
+            <h3>${name}</h3>
+
+            <p><strong>Dirección:</strong><br>${address}</p>
+
+            <p><strong>Teléfono:</strong><br>${phone}</p>
+
+            <p>
+                <strong>Sitio Web:</strong><br>
+                <a href="${website}" target="_blank">
+                    ${website}
+                </a>
+            </p>
+
+            <p><strong>Emails:</strong><br>${emails}</p>
+        `;
+
+        resultsContainer.appendChild(card);
+
+        // ===============================
+        // MAPA
+        // ===============================
+        if (lat && lng) {
+
+            const marker = new google.maps.Marker({
+                position: { lat, lng },
+                map,
+                title: name,
+            });
+
+            markers.push(marker);
+
+        }
+
+    });
+
+    // ===============================
+    // BOTÓN CARGAR MÁS
+    // ===============================
+    const loadMoreBtn = document.getElementById("loadMoreBtn");
+
+    // mostrar botón si hay más ocultos
+// O si Google tiene más páginas
+if (end < allPlaces.length || nextPageToken) {
+
+    loadMoreBtn.style.display = "block";
+
+} else {
+
+    loadMoreBtn.style.display = "none";
+
+}
+
+
+}
+
+// ===============================
+// BUSCAR LUGARES
 // ===============================
 async function searchPlaces(loadMore = false) {
 
-    const query = document
-        .getElementById("searchInput")
-        .value
-        .trim();
+    const queryInput = document.getElementById("searchInput");
 
-    if (!query) {
-
-        alert("Escribe una búsqueda");
-
+    if (!queryInput) {
+        console.error("No existe el input #searchInput");
         return;
-
     }
 
-    const resultsContainer =
-        document.getElementById("results");
+    const query = queryInput.value.trim();
+
+    if (!query) {
+        alert("Escribe una búsqueda");
+        return;
+    }
 
     try {
 
+        const resultsContainer = document.getElementById("results");
+
         if (!loadMore) {
 
-            resultsContainer.innerHTML =
-                "<p>Buscando lugares...</p>";
+            resultsContainer.innerHTML = `
+                <p>Buscando lugares...</p>
+            `;
 
             clearMarkers();
 
+            allPlaces = [];
+
+            currentPage = 1;
+
         }
 
-        let url =
-            `https://geo-ai-agent.onrender.com/search?query=${encodeURIComponent(query)}`;
+        // ===============================
+        // URL BACKEND
+        // ===============================
+        let url = `https://geo-ai-agent.onrender.com/search?query=${encodeURIComponent(query)}`;
 
-        // PAGINACIÓN
         if (loadMore && nextPageToken) {
-
             url += `&page_token=${nextPageToken}`;
-
         }
 
+        // ===============================
+        // FETCH
+        // ===============================
         const response = await fetch(url);
 
         if (!response.ok) {
-
-            throw new Error("Error del servidor");
-
+            throw new Error(`Error HTTP: ${response.status}`);
         }
 
         const data = await response.json();
 
         console.log("RESPUESTA:", data);
 
+        // ===============================
+        // PLACES
+        // ===============================
         const places = data.places.results || [];
 
         console.log("PLACES:", places);
 
-        nextPageToken =
-            data.places.next_page_token || null;
+        nextPageToken = data.places.next_page_token || null;
 
-        if (!loadMore) {
+        // guardar resultados
+        allPlaces = [...allPlaces, ...places];
 
-            resultsContainer.innerHTML = "";
-
-        }
-
-        if (places.length === 0 && !loadMore) {
-
-            resultsContainer.innerHTML =
-                "<p>No se encontraron resultados.</p>";
-
-            return;
-
-        }
-
-        const bounds = new google.maps.LatLngBounds();
-
-        places.forEach(place => {
-
-            const name =
-                place.name || "Sin nombre";
-
-            const address =
-                place.address || "Sin dirección";
-
-            const lat =
-                place.location?.lat;
-
-            const lng =
-                place.location?.lng;
-
-            // ===============================
-            // CARD
-            // ===============================
-            const card =
-                document.createElement("div");
-
-            card.className = "place-card";
-
-            card.innerHTML = `
-                <h3>${name}</h3>
-
-                <p>
-                    <strong>Dirección:</strong><br>
-                    ${address}
-                </p>
-            `;
-
-            resultsContainer.appendChild(card);
-
-            // ===============================
-            // MAPA
-            // ===============================
-            if (lat && lng) {
-
-                const marker =
-                    new google.maps.Marker({
-
-                        position: { lat, lng },
-
-                        map,
-
-                        title: name,
-
-                    });
-
-                const infoWindow =
-                    new google.maps.InfoWindow({
-
-                        content: `
-                            <div style="max-width:200px;">
-                                <h3>${name}</h3>
-                                <p>${address}</p>
-                            </div>
-                        `
-
-                    });
-
-                // CLICK MARKER
-                marker.addListener("click", () => {
-
-                    infoWindow.open(map, marker);
-
-                    map.setCenter({ lat, lng });
-
-                    map.setZoom(15);
-
-                });
-
-                // CLICK CARD
-                card.addEventListener("click", () => {
-
-                    map.setCenter({ lat, lng });
-
-                    map.setZoom(15);
-
-                    infoWindow.open(map, marker);
-
-                });
-
-                markers.push(marker);
-
-                bounds.extend({ lat, lng });
-
-            }
-
-        });
-
-        // AUTO ZOOM
-        if (places.length > 0) {
-
-            map.fitBounds(bounds);
-
-        }
+        // renderizar
+        renderPlaces();
 
         // ===============================
-        // IA
+        // ANALISIS IA
         // ===============================
         if (!loadMore && data.analysis) {
 
-            const analysisDiv =
-                document.getElementById("analysis");
+            const analysisDiv = document.getElementById("analysis");
 
             if (analysisDiv) {
 
@@ -220,28 +215,15 @@ async function searchPlaces(loadMore = false) {
 
         }
 
-        // ===============================
-        // BOTÓN CARGAR MÁS
-        // ===============================
-        const loadMoreBtn =
-            document.getElementById("loadMoreBtn");
-
-        if (nextPageToken) {
-
-            loadMoreBtn.style.display = "block";
-
-        } else {
-
-            loadMoreBtn.style.display = "none";
-
-        }
-
     } catch (error) {
 
         console.error(error);
 
-        resultsContainer.innerHTML =
-            "<p>Error al buscar resultados.</p>";
+        const resultsContainer = document.getElementById("results");
+
+        resultsContainer.innerHTML = `
+            <p>Error al buscar resultados.</p>
+        `;
 
     }
 
@@ -250,57 +232,70 @@ async function searchPlaces(loadMore = false) {
 // ===============================
 // CARGAR MÁS
 // ===============================
-function loadMorePlaces() {
+async function loadMorePlaces() {
 
-    searchPlaces(true);
+    const visible = currentPage * placesPerPage;
+
+    // si todavía hay resultados ocultos
+    if (visible < allPlaces.length) {
+
+        currentPage++;
+
+        renderPlaces();
+
+        return;
+    }
+
+    // si ya no hay ocultos pero sí token
+    if (nextPageToken) {
+
+        await searchPlaces(true);
+
+        currentPage++;
+
+        renderPlaces();
+
+    }
 
 }
 
 // ===============================
-// CSV
+// EXPORTAR CSV
 // ===============================
 function downloadCSV() {
 
-    const cards =
-        document.querySelectorAll(".place-card");
+    const cards = document.querySelectorAll(".place-card");
 
     if (cards.length === 0) {
-
-        alert("No hay resultados");
-
+        alert("No hay resultados para descargar");
         return;
-
     }
 
-    let csv =
-        "Nombre,Direccion\n";
+    let csv = "Nombre,Direccion,Telefono,Website,Emails\n";
 
     cards.forEach(card => {
 
-        const lines =
-            card.innerText.split("\n");
+        const lines = card.innerText.split("\n");
 
-        const nombre =
-            lines[0] || "";
+        const nombre = lines[0] || "";
 
-        const direccion =
-            lines[2] || "";
+        const direccion = lines[2] || "";
 
-        csv +=
-            `"${nombre}","${direccion}"\n`;
+        const telefono = lines[4] || "";
+
+        const website = lines[6] || "";
+
+        const emails = lines[8] || "";
+
+        csv += `"${nombre}","${direccion}","${telefono}","${website}","${emails}"\n`;
 
     });
 
-    const blob =
-        new Blob([csv], {
-            type: "text/csv"
-        });
+    const blob = new Blob([csv], { type: "text/csv" });
 
-    const url =
-        window.URL.createObjectURL(blob);
+    const url = window.URL.createObjectURL(blob);
 
-    const a =
-        document.createElement("a");
+    const a = document.createElement("a");
 
     a.href = url;
 
@@ -313,21 +308,18 @@ function downloadCSV() {
 }
 
 // ===============================
-// ENTER
+// ENTER PARA BUSCAR
 // ===============================
 document.addEventListener("DOMContentLoaded", () => {
 
-    const input =
-        document.getElementById("searchInput");
+    const input = document.getElementById("searchInput");
 
     if (input) {
 
         input.addEventListener("keypress", (e) => {
 
             if (e.key === "Enter") {
-
                 searchPlaces();
-
             }
 
         });
