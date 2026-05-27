@@ -7,7 +7,7 @@ import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-GOOGLE_API_KEY = "TU_GOOGLE_MAPS_API_KEY"
+GOOGLE_API_KEY = "AIzaSyAsUyVuTHPgQ-8OR8DvYLyGbbxDkkiShP8"
 
 
 def extract_emails_from_website(url):
