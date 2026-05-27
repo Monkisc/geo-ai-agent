@@ -10,7 +10,6 @@ client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
 
-
 def ask_agent(user_query):
 
     places = search_places(user_query)
@@ -27,12 +26,22 @@ def ask_agent(user_query):
     Analiza los resultados y responde de forma organizada y útil.
     """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt
-    )
+    try:
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+
+        analysis = response.text
+
+    except Exception as e:
+
+        print("GEMINI ERROR:", e)
+
+        analysis = "No fue posible generar el análisis con IA, pero los lugares fueron encontrados correctamente."
 
     return {
         "places": places,
-        "analysis": response.text
+        "analysis": analysis
     }
