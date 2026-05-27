@@ -5,7 +5,7 @@ from agents.geo_agent import ask_agent
 
 app = FastAPI()
 
-# CORS PARA NETLIFY
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,7 +14,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# RUTA PRINCIPAL
 @app.get("/")
 def home():
 
@@ -23,7 +22,6 @@ def home():
         "message": "Geo AI Agent funcionando 🚀"
     }
 
-# BUSCADOR
 @app.get("/search")
 def search(query: str):
 
