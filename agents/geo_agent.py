@@ -12,22 +12,21 @@ client = genai.Client(
 
 def ask_agent(user_query, page_token=None):
 
-    places = search_places(
-        user_query,
-        page_token
-    )
+    places = search_places(user_query, page_token)
 
     prompt = f"""
     El usuario pidió:
 
     {user_query}
 
-    Estos son los resultados encontrados:
+    Estos son algunos resultados encontrados:
 
-    {places}
+    {places.get("results", [])[:5]}
 
-    Analiza los resultados y responde corto y útil.
+    Analiza los resultados de forma breve y útil.
     """
+
+    analysis = ""
 
     try:
 
@@ -40,9 +39,7 @@ def ask_agent(user_query, page_token=None):
 
     except Exception as e:
 
-        print("GEMINI ERROR:", e)
-
-        analysis = "No se pudo generar análisis IA."
+        analysis = f"Error IA: {str(e)}"
 
     return {
         "places": places,

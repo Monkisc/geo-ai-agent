@@ -14,9 +14,10 @@ app.add_middleware(
 )
 
 @app.get("/")
-def home():
+def root():
+
     return {
-        "status": "ok"
+        "status": "Geo AI Agent funcionando"
     }
 
 @app.get("/search")
@@ -25,3 +26,4 @@ def search(query: str, page_token: str = None):
     result = ask_agent(query, page_token)
 
     return result
+
