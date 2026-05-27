@@ -2,6 +2,11 @@ let map;
 let markers = [];
 let nextPageToken = null;
 
+let allPlaces = [];
+let currentPage = 1;
+
+const placesPerPage = 5;
+
 // ===============================
 // INICIAR MAPA
 // ===============================
@@ -26,6 +31,96 @@ function clearMarkers() {
 }
 
 // ===============================
+// RENDERIZAR RESULTADOS
+// ===============================
+function renderPlaces() {
+
+    const resultsContainer = document.getElementById("results");
+
+    resultsContainer.innerHTML = "";
+
+    const end = currentPage * placesPerPage;
+
+    const visiblePlaces = allPlaces.slice(0, end);
+
+    visiblePlaces.forEach(place => {
+
+        const name = place.name || "Sin nombre";
+
+        const address = place.address || "Sin dirección";
+
+        const phone = place.phone || "Sin teléfono";
+
+        const website = place.website || "Sin sitio web";
+
+        const emails = place.emails?.length
+            ? place.emails.join(", ")
+            : "Sin emails";
+
+        const lat = place.location?.lat;
+        const lng = place.location?.lng;
+
+        // ===============================
+        // CARD
+        // ===============================
+        const card = document.createElement("div");
+
+        card.className = "place-card";
+
+        card.innerHTML = `
+            <h3>${name}</h3>
+
+            <p><strong>Dirección:</strong><br>${address}</p>
+
+            <p><strong>Teléfono:</strong><br>${phone}</p>
+
+            <p>
+                <strong>Sitio Web:</strong><br>
+                <a href="${website}" target="_blank">
+                    ${website}
+                </a>
+            </p>
+
+            <p><strong>Emails:</strong><br>${emails}</p>
+        `;
+
+        resultsContainer.appendChild(card);
+
+        // ===============================
+        // MAPA
+        // ===============================
+        if (lat && lng) {
+
+            const marker = new google.maps.Marker({
+                position: { lat, lng },
+                map,
+                title: name,
+            });
+
+            markers.push(marker);
+
+        }
+
+    });
+
+    // ===============================
+    // BOTÓN CARGAR MÁS
+    // ===============================
+    const loadMoreBtn = document.getElementById("loadMoreBtn");
+
+    if (end < allPlaces.length) {
+
+        loadMoreBtn.style.display = "block";
+
+    } else {
+
+        loadMoreBtn.style.display = "none";
+
+    }
+
+}
+
+// ===============================
 // BUSCAR LUGARES
 // ===============================
 async function searchPlaces(loadMore = false) {
@@ -46,7 +141,6 @@ async function searchPlaces(loadMore = false) {
 
     try {
 
-        // loader opcional
         const resultsContainer = document.getElementById("results");
 
         if (!loadMore) {
@@ -57,6 +151,10 @@ async function searchPlaces(loadMore = false) {
 
             clearMarkers();
 
+            allPlaces = [];
+
+            currentPage = 1;
+
         }
 
         // ===============================
@@ -64,7 +162,6 @@ async function searchPlaces(loadMore = false) {
         // ===============================
         let url = `https://geo-ai-agent.onrender.com/search?query=${encodeURIComponent(query)}`;
 
-        // PAGINACIÓN
         if (loadMore && nextPageToken) {
             url += `&page_token=${nextPageToken}`;
         }
@@ -89,95 +186,16 @@ async function searchPlaces(loadMore = false) {
 
         console.log("PLACES:", places);
 
-        // guardar token
         nextPageToken = data.places.next_page_token || null;
 
-        // limpiar solo si NO es cargar más
-        if (!loadMore) {
-            resultsContainer.innerHTML = "";
-        }
+        // guardar resultados
+        allPlaces = [...allPlaces, ...places];
+
+        // renderizar
+        renderPlaces();
 
         // ===============================
-        // SI NO HAY RESULTADOS
-        // ===============================
-        if (places.length === 0 && !loadMore) {
-
-            resultsContainer.innerHTML = `
-                <p>No se encontraron resultados.</p>
-            `;
-
-            return;
-
-        }
-
-        // ===============================
-        // RECORRER LUGARES
-        // ===============================
-        places.forEach(place => {
-
-            // ===============================
-            // DATOS
-            // ===============================
-            const name = place.name || "Sin nombre";
-
-            const address = place.address || "Sin dirección";
-
-            const phone = place.phone || "Sin teléfono";
-
-            const website = place.website || "Sin sitio web";
-
-            const emails = place.emails?.length
-                ? place.emails.join(", ")
-                : "Sin emails";
-
-            const lat = place.location?.lat;
-            const lng = place.location?.lng;
-
-            // ===============================
-            // CARD HTML
-            // ===============================
-            const card = document.createElement("div");
-
-            card.className = "place-card";
-
-            card.innerHTML = `
-                <h3>${name}</h3>
-
-                <p><strong>Dirección:</strong><br>${address}</p>
-
-                <p><strong>Teléfono:</strong><br>${phone}</p>
-
-                <p>
-                    <strong>Sitio Web:</strong><br>
-                    <a href="${website}" target="_blank">
-                        ${website}
-                    </a>
-                </p>
-
-                <p><strong>Emails:</strong><br>${emails}</p>
-            `;
-
-            resultsContainer.appendChild(card);
-
-            // ===============================
-            // MAPA
-            // ===============================
-            if (lat && lng) {
-
-                const marker = new google.maps.Marker({
-                    position: { lat, lng },
-                    map,
-                    title: name,
-                });
-
-                markers.push(marker);
-
-            }
-
-        });
-
-        // ===============================
-        // MOSTRAR ANALISIS IA
+        // ANALISIS IA
         // ===============================
         if (!loadMore && data.analysis) {
 
@@ -194,21 +212,6 @@ async function searchPlaces(loadMore = false) {
 
         }
 
-        // ===============================
-        // BOTÓN CARGAR MÁS
-        // ===============================
-        const loadMoreBtn = document.getElementById("loadMoreBtn");
-
-        if (nextPageToken) {
-
-            loadMoreBtn.style.display = "block";
-
-        } else {
-
-            loadMoreBtn.style.display = "none";
-
-        }
-
     } catch (error) {
 
         console.error(error);
@@ -218,6 +221,36 @@ async function searchPlaces(loadMore = false) {
         resultsContainer.innerHTML = `
             <p>Error al buscar resultados.</p>
         `;
+
+    }
+
+}
+
+// ===============================
+// CARGAR MÁS
+// ===============================
+async function loadMorePlaces() {
+
+    const visible = currentPage * placesPerPage;
+
+    // si todavía hay resultados ocultos
+    if (visible < allPlaces.length) {
+
+        currentPage++;
+
+        renderPlaces();
+
+        return;
+    }
+
+    // si ya no hay ocultos pero sí token
+    if (nextPageToken) {
+
+        await searchPlaces(true);
+
+        currentPage++;
+
+        renderPlaces();
 
     }
 
