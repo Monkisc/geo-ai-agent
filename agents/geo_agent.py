@@ -52,13 +52,19 @@ def ask_agent(user_query, page_token=None):
 
     clean_query = clean_text(user_query)
 
+    # ===============================
+    # GEMINI SOLO ANALIZA
+    # ===============================
     prompt = f"""
 
-    El usuario busca:
+    El usuario buscó:
 
     {clean_query}
 
-    Analiza los resultados encontrados.
+    Genera un análisis corto de los resultados encontrados.
+
+    NO inventes emails.
+    NO inventes información.
 
     """
 

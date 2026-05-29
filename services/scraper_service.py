@@ -15,8 +15,6 @@ def is_valid_email(email):
         "test",
         "godaddy",
         "cloudflare",
-        "wix",
-        "sentry",
         "cpanel",
         "apache",
         "hosting",
@@ -24,6 +22,8 @@ def is_valid_email(email):
         "png",
         "jpg",
         "jpeg",
+        "gif",
+        "svg",
         "webp",
         ".css",
         ".js",
@@ -41,21 +41,23 @@ def is_valid_email(email):
     if "?" in email:
         return False
 
-    if any(word in email.lower() for word in blacklist):
+    email_lower = email.lower()
+
+    if any(word in email_lower for word in blacklist):
         return False
 
     return True
 
 
 # ===============================
-# EXTRAER EMAILS
+# EXTRAER EMAILS REALES
 # ===============================
 def extract_emails_from_website(url):
 
-    emails = set()
-
     if not url:
         return []
+
+    emails = set()
 
     headers = {
 
@@ -111,7 +113,7 @@ def extract_emails_from_website(url):
                         emails.add(email)
 
             # ===============================
-            # REGEX
+            # REGEX HTML REAL
             # ===============================
             regex_emails = re.findall(
 
@@ -127,6 +129,8 @@ def extract_emails_from_website(url):
 
                 if is_valid_email(email):
                     emails.add(email)
+
+            print("EMAILS REALES:", emails)
 
             return list(emails)[:5]
 

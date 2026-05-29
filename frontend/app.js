@@ -226,7 +226,7 @@ function downloadCSV() {
     allPlaces.forEach(place => {
         const name = place.name || "Sin nombre";
         const website = place.website || "Sin sitio web";
-        const emails = place.emails?.length ? place.emails.join(" | ") : "Sin emails";
+        const emails = place.emails?.length ? place.emails.join(" | ") : "No encontrados";
 
         // Reemplazar comillas dobles para evitar que se rompa el formato del archivo CSV
         const cleanName = name.replace(/"/g, '""');

@@ -14,7 +14,7 @@ if os.path.exists(".env"):
 
 
 # ===============================
-# LIMPIAR TEXTO
+# CLEAN TEXT
 # ===============================
 def clean_text(text):
 
@@ -135,6 +135,9 @@ def search_places(query, page_token=None):
                 "No disponible"
             )
 
+            # ===============================
+            # SOLO EMAILS REALES
+            # ===============================
             emails = []
 
             if website:
