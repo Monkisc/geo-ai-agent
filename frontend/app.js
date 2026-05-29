@@ -13,7 +13,7 @@ const placesPerPage = 5;
 function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 4.7110, lng: -74.0721 },
-        zoom: 12, // Subí un poco el zoom inicial para que Bogotá se aprecie mejor desde el arranque
+        zoom: 12, // Bogotá desde el arranque
     });
 }
 
@@ -35,46 +35,40 @@ function renderPlaces() {
     const end = currentPage * placesPerPage;
     const visiblePlaces = allPlaces.slice(0, end);
 
-    // Caja virtual (bounds) para encuadrar automáticamente el mapa según los resultados encontrados
     const bounds = new google.maps.LatLngBounds();
     let hasMarkers = false;
 
     visiblePlaces.forEach(place => {
         const name = place.name || "Sin nombre";
-        const address = place.address || "Sin dirección";
-        const phone = place.phone || "Sin teléfono";
         const website = place.website || "Sin sitio web";
-        const emails = place.emails?.length
+        const errorsOrEmails = place.emails?.length
             ? place.emails.join(", ")
             : "Sin emails";
 
-        // EXTRACCIÓN CORREGIDA: Acceso directo a la raíz del objeto enviado por tu Python
         const lat = place.lat;
         const lng = place.lng;
 
         // ===============================
-        // CARD (HTML de la barra lateral)
+        // CARD OPTIMIZADA (Solo Sitio Web y Emails)
         // ===============================
         const card = document.createElement("div");
         card.className = "place-card";
         card.innerHTML = `
             <h3>${name}</h3>
-            <p><strong>Dirección:</strong><br>${address}</p>
-            <p><strong>Teléfono:</strong><br>${phone}</p>
             <p>
                 <strong>Sitio Web:</strong><br>
                 <a href="${website}" target="_blank">
                     ${website}
                 </a>
             </p>
-            <p><strong>Emails:</strong><br>${emails}</p>
+            <p><strong>Emails Reales Encontrados:</strong><br>${errorsOrEmails}</p>
         `;
 
-        // EVENTO CLICK EN LA TARJETA: Mueve la cámara del mapa directo al lugar seleccionado
+        // EVENTO CLICK EN LA TARJETA
         card.addEventListener("click", () => {
             if (lat && lng) {
                 map.setCenter({ lat: parseFloat(lat), lng: parseFloat(lng) });
-                map.setZoom(16); // Zoom cercano para detallar la zona del colegio
+                map.setZoom(16);
             }
         });
 
@@ -90,12 +84,11 @@ function renderPlaces() {
                 position: markerPosition,
                 map: map,
                 title: name,
-                animation: google.maps.Animation.DROP // Efecto de caída para cada marcador
+                animation: google.maps.Animation.DROP
             });
 
-            // Ventana informativa emergente al hacer clic en el pin del mapa
             const infowindow = new google.maps.InfoWindow({
-                content: `<strong>${name}</strong><br>${address}`
+                content: `<strong>${name}</strong><br><a href="${website}" target="_blank">${website}</a>`
             });
 
             marker.addListener("click", () => {
@@ -103,12 +96,11 @@ function renderPlaces() {
             });
 
             markers.push(marker);
-            bounds.extend(markerPosition); // Expandir el contenedor virtual para incluir la coordenada
+            bounds.extend(markerPosition);
             hasMarkers = true;
         }
     });
 
-    // Si hay marcadores válidos en el mapa, ajusta el encuadre automáticamente
     if (hasMarkers) {
         map.fitBounds(bounds);
     }
@@ -147,25 +139,20 @@ async function searchPlaces(loadMore = false) {
 
         if (!loadMore) {
             resultsContainer.innerHTML = `
-                <p>Buscando lugares...</p>
+                <p>Buscando lugares y escaneando correos reales...</p>
             `;
             clearMarkers();
             allPlaces = [];
             currentPage = 1;
         }
 
-        // ===============================
-        // URL BACKEND (Google Cloud Run)
-        // ===============================
+        // URL apuntando a tu backend de Google Cloud Run
         let url = `https://geo-ai-agent-605558562484.us-central1.run.app/search?query=${encodeURIComponent(query)}`;
 
         if (loadMore && nextPageToken) {
             url += `&page_token=${nextPageToken}`;
         }
 
-        // ===============================
-        // FETCH
-        // ===============================
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -175,18 +162,12 @@ async function searchPlaces(loadMore = false) {
         const data = await response.json();
         console.log("RESPUESTA:", data);
 
-        // ===============================
-        // PLACES
-        // ===============================
         const places = data.places.results || [];
         console.log("PLACES:", places);
 
         nextPageToken = data.places.next_page_token || null;
-
-        // Guardar resultados acumulados
         allPlaces = [...allPlaces, ...places];
 
-        // Renderizar todo en la barra lateral y en el mapa
         renderPlaces();
 
         // ===============================
@@ -196,7 +177,7 @@ async function searchPlaces(loadMore = false) {
             const analysisDiv = document.getElementById("analysis");
             if (analysisDiv) {
                 analysisDiv.innerHTML = `
-                    <h2>Análisis IA</h2>
+                    <h2>Análisis de Prospección IA</h2>
                     <p>${data.analysis}</p>
                 `;
             }
@@ -206,7 +187,7 @@ async function searchPlaces(loadMore = false) {
         console.error(error);
         const resultsContainer = document.getElementById("results");
         resultsContainer.innerHTML = `
-            <p>Error al buscar resultados.</p>
+            <p>Error al buscar resultados y raspar sitios web.</p>
         `;
     }
 }
@@ -217,14 +198,12 @@ async function searchPlaces(loadMore = false) {
 async function loadMorePlaces() {
     const visible = currentPage * placesPerPage;
 
-    // Si todavía hay resultados ocultos de forma local
     if (visible < allPlaces.length) {
         currentPage++;
         renderPlaces();
         return;
     }
 
-    // Si ya no hay locales pero Google tiene un token para más páginas
     if (nextPageToken) {
         await searchPlaces(true);
         currentPage++;
@@ -233,4 +212,49 @@ async function loadMorePlaces() {
 }
 
 // ===============================
-// EXPORT
+// EXPORTAR CSV OPTIMIZADO
+// ===============================
+function downloadCSV() {
+    if (allPlaces.length === 0) {
+        alert("No hay resultados para descargar");
+        return;
+    }
+
+    // Encabezado limpio enfocado en Leads
+    let csv = "Nombre de la Empresa/Colegio,Sitio Web,Emails Encontrados\n";
+
+    allPlaces.forEach(place => {
+        const name = place.name || "Sin nombre";
+        const website = place.website || "Sin sitio web";
+        const emails = place.emails?.length ? place.emails.join(" | ") : "Sin emails";
+
+        // Reemplazar comillas dobles para evitar que se rompa el formato del archivo CSV
+        const cleanName = name.replace(/"/g, '""');
+        const cleanWebsite = website.replace(/"/g, '""');
+        const cleanEmails = emails.replace(/"/g, '""');
+
+        csv += `"${cleanName}","${cleanWebsite}","${cleanEmails}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "leads_digitales.csv";
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// ===============================
+// ENTER PARA BUSCAR
+// ===============================
+document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("searchInput");
+    if (input) {
+        input.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                searchPlaces();
+            }
+        });
+    }
+});
