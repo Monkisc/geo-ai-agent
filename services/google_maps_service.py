@@ -28,7 +28,51 @@ def clean_text(text):
 
 
 # ===============================
-# BUSCAR LUGARES
+# PLACE DETAILS
+# ===============================
+def get_place_details(place_id, api_key):
+
+    try:
+
+        url = "https://maps.googleapis.com/maps/api/place/details/json"
+
+        params = {
+
+            "place_id": place_id,
+
+            "fields":
+            "website,formatted_phone_number",
+
+            "key": api_key
+
+        }
+
+        response = httpx.get(
+
+            url,
+
+            params=params,
+
+            timeout=10
+
+        )
+
+        data = response.json()
+
+        return data.get(
+            "result",
+            {}
+        )
+
+    except Exception as e:
+
+        print("DETAILS ERROR:", e)
+
+        return {}
+
+
+# ===============================
+# SEARCH PLACES
 # ===============================
 def search_places(query, page_token=None):
 
@@ -43,9 +87,6 @@ def search_places(query, page_token=None):
 
     clean_query = clean_text(query)
 
-    # ===============================
-    # URL TEXT SEARCH
-    # ===============================
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
 
     params = {
@@ -56,7 +97,6 @@ def search_places(query, page_token=None):
 
     }
 
-    # PAGINACIÓN
     if page_token:
         params["pagetoken"] = page_token
 
@@ -68,7 +108,7 @@ def search_places(query, page_token=None):
 
             params=params,
 
-            timeout=20
+            timeout=15
 
         )
 
@@ -76,10 +116,7 @@ def search_places(query, page_token=None):
 
         results = []
 
-        # ===============================
-        # RECORRER RESULTADOS
-        # ===============================
-        for place in data.get("results", []):
+        for place in data.get("results", [])[:5]:
 
             place_id = place.get("place_id")
 
@@ -98,9 +135,6 @@ def search_places(query, page_token=None):
                 "No disponible"
             )
 
-            # ===============================
-            # EXTRAER EMAILS
-            # ===============================
             emails = []
 
             if website:
@@ -109,9 +143,6 @@ def search_places(query, page_token=None):
                     website
                 )
 
-            # ===============================
-            # RESULTADO FINAL
-            # ===============================
             results.append({
 
                 "name":
@@ -144,9 +175,6 @@ def search_places(query, page_token=None):
 
             })
 
-        # ===============================
-        # RETORNAR
-        # ===============================
         return {
 
             "results": results,
@@ -167,48 +195,4 @@ def search_places(query, page_token=None):
             "error": str(e)
 
         }
-
-
-# ===============================
-# PLACE DETAILS
-# ===============================
-def get_place_details(place_id, api_key):
-
-    try:
-
-        url = "https://maps.googleapis.com/maps/api/place/details/json"
-
-        params = {
-
-            "place_id": place_id,
-
-            "fields":
-            "website,formatted_phone_number",
-
-            "key": api_key
-
-        }
-
-        response = httpx.get(
-
-            url,
-
-            params=params,
-
-            timeout=15
-
-        )
-
-        data = response.json()
-
-        return data.get(
-            "result",
-            {}
-        )
-
-    except Exception as e:
-
-        print("DETAILS ERROR:", e)
-
-        return {}
     
