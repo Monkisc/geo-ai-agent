@@ -5,45 +5,54 @@ from bs4 import BeautifulSoup
 
 
 # ===============================
+# BLACKLIST
+# ===============================
+BLACKLIST = [
+
+    "example",
+    "test",
+    "godaddy",
+    "cloudflare",
+    "cpanel",
+    "apache",
+    "hosting",
+    "localhost",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".webp",
+    ".css",
+    ".js",
+    "noreply",
+    "no-reply",
+    "sentry",
+    "wix",
+    "wordpress",
+    "cookie",
+    "privacy"
+
+]
+
+
+# ===============================
 # VALIDAR EMAIL
 # ===============================
 def is_valid_email(email):
 
-    blacklist = [
-
-        "example",
-        "test",
-        "godaddy",
-        "cloudflare",
-        "cpanel",
-        "apache",
-        "hosting",
-        "localhost",
-        "png",
-        "jpg",
-        "jpeg",
-        "gif",
-        "svg",
-        "webp",
-        ".css",
-        ".js",
-        "noreply",
-        "no-reply"
-
-    ]
-
     if not email:
         return False
 
-    if len(email) > 45:
-        return False
+    email = email.lower().strip()
 
     if "?" in email:
         return False
 
-    email_lower = email.lower()
+    if len(email) > 50:
+        return False
 
-    if any(word in email_lower for word in blacklist):
+    if any(word in email for word in BLACKLIST):
         return False
 
     return True
@@ -57,14 +66,14 @@ def extract_emails_from_website(url):
     if not url:
         return []
 
-    emails = set()
-
     headers = {
 
         "User-Agent":
         "Mozilla/5.0"
 
     }
+
+    found_emails = set()
 
     try:
 
@@ -80,16 +89,17 @@ def extract_emails_from_website(url):
 
         ) as client:
 
+            # ===============================
+            # HOME
+            # ===============================
             response = client.get(url)
 
             if response.status_code != 200:
                 return []
 
-            html = response.text
-
             soup = BeautifulSoup(
 
-                html,
+                response.text,
 
                 "html.parser"
 
@@ -110,16 +120,18 @@ def extract_emails_from_website(url):
                     ).split("?")[0].strip().lower()
 
                     if is_valid_email(email):
-                        emails.add(email)
+                        found_emails.add(email)
 
             # ===============================
-            # REGEX HTML REAL
+            # SOLO TEXTO VISIBLE
             # ===============================
+            visible_text = soup.get_text(" ")
+
             regex_emails = re.findall(
 
                 r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
 
-                html
+                visible_text
 
             )
 
@@ -128,11 +140,28 @@ def extract_emails_from_website(url):
                 email = email.lower().strip()
 
                 if is_valid_email(email):
-                    emails.add(email)
+                    found_emails.add(email)
 
-            print("EMAILS REALES:", emails)
+            # ===============================
+            # FILTRO EXTRA
+            # ===============================
+            cleaned = []
 
-            return list(emails)[:5]
+            for email in found_emails:
+
+                # evitar emails falsos genéricos
+                if email.startswith("info@"):
+
+                    domain = email.split("@")[-1]
+
+                    if domain.count(".") < 1:
+                        continue
+
+                cleaned.append(email)
+
+            print("EMAILS REALES:", cleaned)
+
+            return cleaned[:5]
 
     except Exception as e:
 
