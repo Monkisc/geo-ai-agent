@@ -27,8 +27,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # === AÑADE ESTAS DOS LÍNEAS CON TUS LLAVES REALES ===
-ENV GOOGLE_MAPS_API_KEY="TU_LLAVE_DE_MAPS_AQUÍ"
-ENV GEMINI_API_KEY="TU_LLAVE_DE_GEMINI_AQUÍ"
-
+ENV GOOGLE_MAPS_API_KEY=AIzaSyAsUyVuTHPgQ-8OR8DvYLyGbbxDkkiShP8
+ENV GEMINI_API_KEY=AIzaSyAa_U1-P5HIOkVkRk7lXwM9nH9RFvVeipM
 # 5. Ejecutar Uvicorn
 CMD uvicorn main:app --host 0.0.0.0 --port $PORT
