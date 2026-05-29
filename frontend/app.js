@@ -155,9 +155,9 @@ async function searchPlaces(loadMore = false) {
         }
 
         // ===============================
-        // URL BACKEND (Render)
+        // URL BACKEND (Google Cloud Run)
         // ===============================
-        let url = `https://geo-ai-agent.onrender.com/search?query=${encodeURIComponent(query)}`;
+        let url = `https://geo-ai-agent-605558562484.us-central1.run.app/search?query=${encodeURIComponent(query)}`;
 
         if (loadMore && nextPageToken) {
             url += `&page_token=${nextPageToken}`;
@@ -233,48 +233,4 @@ async function loadMorePlaces() {
 }
 
 // ===============================
-// EXPORTAR CSV
-// ===============================
-function downloadCSV() {
-    const cards = document.querySelectorAll(".place-card");
-
-    if (cards.length === 0) {
-        alert("No hay resultados para descargar");
-        return;
-    }
-
-    let csv = "Nombre,Direccion,Telefono,Website,Emails\n";
-
-    cards.forEach(card => {
-        const lines = card.innerText.split("\n");
-        const nombre = lines[0] || "";
-        const direccion = lines[2] || "";
-        const telefono = lines[4] || "";
-        const website = lines[6] || "";
-        const emails = lines[8] || "";
-
-        csv += `"${nombre}","${direccion}","${telefono}","${website}","${emails}"\n`;
-    });
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "resultados.csv";
-    a.click();
-    window.URL.revokeObjectURL(url);
-}
-
-// ===============================
-// ENTER PARA BUSCAR
-// ===============================
-document.addEventListener("DOMContentLoaded", () => {
-    const input = document.getElementById("searchInput");
-    if (input) {
-        input.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                searchPlaces();
-            }
-        });
-    }
-});
+// EXPORT
