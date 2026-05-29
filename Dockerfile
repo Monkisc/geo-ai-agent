@@ -11,6 +11,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 4. Copiar el resto del código del proyecto
 COPY . .
 
-# 5. Ejecutar la app con Uvicorn en el puerto que asigne Cloud Run dinámicamente
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
-
+# 5. CORRECCIÓN: Ejecutar Uvicorn permitiendo que Cloud Run defina el puerto dinámicamente con $PORT
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT
