@@ -1,17 +1,19 @@
 # Usamos la imagen oficial de Nginx sobre Alpine Linux
 FROM nginx:alpine
 
-# Borramos los archivos por defecto de Nginx
+# Borramos los archivos y configuraciones por defecto de Nginx
 RUN rm -rf /usr/share/nginx/html/*
+RUN rm /etc/nginx/conf.d/default.conf
 
-# Copiamos todo el contenido de tu frontend al contenedor
+# Copiamos tu archivo de configuración personalizado al contenedor
+COPY nginx.conf /etc/nginx/conf.d/
+
+# Copiamos todo el contenido del frontend (HTML, CSS, JS) al contenedor
 COPY . /usr/share/nginx/html/
 
-# Truco para Cloud Run: Modificamos la configuración de Nginx para que escuche en el puerto 8080 en lugar del 80
-RUN sed -i 's/listen[:[:space:]]*80;/listen 8080;/g' /etc/nginx/conf.d/default.conf
-
-# Exponemos el puerto 8080 que es el que espera Cloud Run
+# Exponemos el puerto 8080 para Cloud Run
 EXPOSE 8080
 
 # Arrancamos Nginx
 CMD ["nginx", "-g", "daemon off;"]
+
