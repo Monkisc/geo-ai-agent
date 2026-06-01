@@ -132,7 +132,7 @@ def ask_agent(user_query, page_token=None):
     transformed_results = []
     
     # FORZADO DE CONTROL: Nos aseguramos de leer hasta 10 elementos de la lista
-    limit = min(10, len(raw_results))
+    limit = min(25, len(raw_results))
     print(f"Procesando un total de {limit} lugares para el frontend.")
 
     for i in range(limit):
