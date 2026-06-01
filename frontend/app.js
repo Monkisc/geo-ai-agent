@@ -10,7 +10,6 @@ const placesPerPage = 25;
 // INICIAR MAPA
 // ===============================
 function initMap() {
-    // Iniciamos el mapa centrado en Bogotá
     map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 4.7110, lng: -74.0721 },
         zoom: 12,
@@ -18,7 +17,7 @@ function initMap() {
             {
                 featureType: "poi.business",
                 elementType: "labels",
-                stylers: [{ visibility: "off" }] // Limpiamos negocios extraños para no saturar
+                stylers: [{ visibility: "off" }]
             }
         ]
     });
@@ -33,7 +32,7 @@ function clearMarkers() {
 }
 
 // ===============================
-// RENDERIZAR RESULTADOS E INTERACTIVIDAD
+// RENDERIZAR RESULTADOS
 // ===============================
 function renderPlaces() {
     const resultsContainer = document.getElementById("results");
@@ -45,7 +44,6 @@ function renderPlaces() {
     const bounds = new google.maps.LatLngBounds();
     let hasMarkers = false;
 
-    // Limpiamos los marcadores previos antes de pintar los nuevos
     clearMarkers();
 
     visiblePlaces.forEach((place, index) => {
@@ -55,12 +53,8 @@ function renderPlaces() {
         const lat = place.lat;
         const lng = place.lng;
 
-        // ID único para conectar la tarjeta con el marcador
         const cardId = `card-${index}`;
 
-        // ===============================
-        // CREACIÓN DE LA TARJETA VISUAL
-        // ===============================
         const card = document.createElement("div");
         card.className = "place-card";
         card.id = cardId;
@@ -75,9 +69,6 @@ function renderPlaces() {
 
         resultsContainer.appendChild(card);
 
-        // ===============================
-        // CONFIGURACIÓN DEL MARCADOR EN EL MAPA
-        // ===============================
         if (lat && lng) {
             const markerPosition = { lat: parseFloat(lat), lng: parseFloat(lng) };
 
@@ -85,30 +76,25 @@ function renderPlaces() {
                 position: markerPosition,
                 map: map,
                 title: name,
-                label: (index + 1).toString(), // Le pone número al pin (1, 2, 3...) para identificarlo fácil
+                label: (index + 1).toString(),
                 animation: google.maps.Animation.DROP
             });
 
-            // Ventana de información con enlace directo a Google Maps para rutas
+            // CORREGIDO: Formato de URL oficial de Google Maps para evitar caídas del mapa
             const infowindow = new google.maps.InfoWindow({
                 content: `
-                    <div style="color: #333;">
-                        <strong>${name}</strong><br>
-                        <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" style="color: #007bff; font-size: 12px; text-decoration: underline;">
-                            ¿Cómo llegar?
+                    <div style="color: #333; font-family: sans-serif;">
+                        <strong>${name}</strong><br><br>
+                        <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank" style="color: #1a73e8; font-size: 12px; font-weight: 500; text-decoration: none;">
+                            ¿Cómo llegar? →
                         </a>
                     </div>
                 `
             });
 
-            // ACCIÓN A: Si hacen clic en el marcador del mapa, ilumina la tarjeta de la izquierda
             marker.addListener("click", () => {
                 infowindow.open(map, marker);
-                
-                // Quitamos el resaltado de cualquier otra tarjeta antes
                 document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active-card"));
-                
-                // Hacemos scroll automático hacia la tarjeta seleccionada y la iluminamos
                 const targetCard = document.getElementById(cardId);
                 if (targetCard) {
                     targetCard.classList.add("active-card");
@@ -116,11 +102,9 @@ function renderPlaces() {
                 }
             });
 
-            // ACCIÓN B: Si hacen clic en la tarjeta de la izquierda, enfoca el mapa en ese pin
             card.addEventListener("click", () => {
                 document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active-card"));
                 card.classList.add("active-card");
-                
                 map.setCenter(markerPosition);
                 map.setZoom(16);
                 infowindow.open(map, marker);
@@ -136,17 +120,18 @@ function renderPlaces() {
         map.fitBounds(bounds);
     }
 
-    // Botón Cargar Más
     const loadMoreBtn = document.getElementById("loadMoreBtn");
-    if (end < allPlaces.length || nextPageToken) {
-        loadMoreBtn.style.display = "block";
-    } else {
-        loadMoreBtn.style.display = "none";
+    if (loadMoreBtn) {
+        if (end < allPlaces.length || nextPageToken) {
+            loadMoreBtn.style.display = "block";
+        } else {
+            loadMoreBtn.style.display = "none";
+        }
     }
 }
 
 // ===============================
-// BUSCAR LUGARES (LLAMADA AL BACKEND)
+// BUSCAR LUGARES
 // ===============================
 async function searchPlaces(loadMore = false) {
     const queryInput = document.getElementById("searchInput");
@@ -197,7 +182,7 @@ async function searchPlaces(loadMore = false) {
 
     } catch (error) {
         console.error(error);
-        document.getElementById("results").innerHTML = `<p>Error al buscar resultados y raspar sitios web.</p>`;
+        document.getElementById("results").innerHTML = `<p>Error al conectar con el servidor.</p>`;
     }
 }
 
