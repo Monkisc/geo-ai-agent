@@ -10,7 +10,6 @@ from services.google_maps_service import search_places
 if os.path.exists(".env"):
     load_dotenv()
 
-# Inicializamos el cliente de Gemini
 client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
@@ -24,18 +23,13 @@ def clean_text(text):
     return str(text).encode('ascii', 'ignore').decode('ascii')
 
 def search_official_website_on_google(place_name):
-    """
-    PLAN B REAL: Usa Gemini conectado al Buscador de Google en vivo 
-    para traer la URL institucional exacta y no inventar nada.
-    """
+    """Busca en Google internet la URL oficial exacta mediante Search Grounding"""
     try:
         prompt = (
             f"Busca en Google internet el sitio web oficial de la institución: '{place_name} Colombia'. "
             f"Extrae la URL principal y responde ÚNICAMENTE con esa URL (ejemplo: https://glm.edu.co). "
             f"No agregues explicaciones, ni introducciones, solo la URL limpia."
         )
-        
-        # Activamos la herramienta de Google Search para que la IA navegue en internet real
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
@@ -43,16 +37,12 @@ def search_official_website_on_google(place_name):
                 tools=[types.Tool(google_search=types.GoogleSearch())]
             )
         )
-        
         predicted_url = response.text.strip()
-        
-        # Limpieza rápida por si la IA devuelve la URL entre comillas o texto limpio
         urls = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', predicted_url)
         if urls:
             return urls[0].rstrip('/')
-            
     except Exception as e:
-        print(f"Error buscando en Google Search Grounding: {str(e)}")
+        print(f"Error en Google Search: {str(e)}")
     return None
 
 def extract_emails_from_html(html_content):
@@ -71,7 +61,7 @@ def extract_emails_from_html(html_content):
     return clean_emails
 
 def scrape_emails_deep(website_url):
-    """Visita la URL real encontrada en Google y extrae los correos de la Home o sección Contacto"""
+    """Visita la URL y extrae correos de la Home o subpáginas de contacto"""
     if not website_url or website_url == "Sin sitio web":
         return ["Sin emails"]
     
@@ -81,14 +71,12 @@ def scrape_emails_deep(website_url):
     
     try:
         with httpx.Client(follow_redirects=True, timeout=6.0, headers=headers) as http_client:
-            # 1. Escanear la Home
             response = http_client.get(website_url)
             if response.status_code == 200:
                 emails = extract_emails_from_html(response.text)
                 if emails:
                     return emails
                 
-                # 2. Si no hay correos en la Home, buscar subpáginas de contacto
                 soup = BeautifulSoup(response.text, "html.parser")
                 for link in soup.find_all("a", href=True):
                     href = link["href"].lower()
@@ -102,13 +90,12 @@ def scrape_emails_deep(website_url):
                                     return sub_emails
                         except Exception:
                             continue
-                            
             return ["No se encontraron emails en el sitio"]
     except Exception:
         return ["No se pudo escanear el sitio"]
 
 def fetch_leads_data(place_id, place_name):
-    """Obtiene el sitio web de Maps o mediante Google Search Grounding y ejecuta el Scraper"""
+    """Obtiene el sitio web de Maps o Google Search y gatilla el scraper"""
     maps_key = os.getenv("GOOGLE_MAPS_API_KEY", "").strip()
     url = "https://maps.googleapis.com/maps/api/place/details/json"
     params = {
@@ -126,7 +113,6 @@ def fetch_leads_data(place_id, place_name):
     except Exception:
         pass
         
-    # ¡AQUÍ ESTÁ EL CAMBIO CRÍTICO! Si Maps no tiene la web, Gemini la busca REALMENTE en Google
     if not website or website == "Sin sitio web":
         real_google_url = search_official_website_on_google(place_name)
         if real_google_url:
@@ -139,23 +125,26 @@ def fetch_leads_data(place_id, place_name):
     return "Sin sitio web", ["Sin emails"]
 
 def ask_agent(user_query, page_token=None):
+    # Traemos la respuesta de tu servicio de mapas
     raw_places = search_places(user_query, page_token)
     raw_results = raw_places.get("results", [])
 
     transformed_results = []
     
-    for p in raw_results[:15]:
+    # FORZADO DE CONTROL: Nos aseguramos de leer hasta 10 elementos de la lista
+    limit = min(10, len(raw_results))
+    print(f"Procesando un total de {limit} lugares para el frontend.")
+
+    for i in range(limit):
+        p = raw_results[i]
         geometry = p.get("geometry", {})
         location = geometry.get("location", {})
         
-        # Mapeo sólido de coordenadas para mantener el mapa 100% funcional
         lat_val = location.get("lat")
         lng_val = location.get("lng")
-        
         place_id = p.get("place_id")
         place_name = p.get("name", "Sin nombre")
         
-        # Buscar la web real en Google + Extraer correos reales
         website, real_emails_list = fetch_leads_data(place_id, place_name)
 
         transformed_place = {
@@ -176,11 +165,7 @@ def ask_agent(user_query, page_token=None):
 
     clean_query = clean_text(user_query)
     clean_results = clean_text(str(transformed_results))
-    prompt = (
-        f"El usuario busca leads analizando canales digitales para: {clean_query}. "
-        f"Datos auditados en la web: {clean_results}. "
-        f"Resume brevemente cuántas páginas web reales logramos verificar mediante Google."
-    )
+    prompt = f"El usuario busca leads para: {clean_query}. Muestra: {clean_results}."
 
     response = client.models.generate_content(
         model="gemini-2.5-flash",
