@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geo AI Lead Agent</title>
-    <link rel="stylesheet" href="frontend/style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -26,14 +26,17 @@
                 <p class="placeholder-text">Escribe tu búsqueda arriba para rastrear leads y correos reales...</p>
             </div>
             
-            <button id="loadMoreBtn" onclick="loadMorePlaces()" style="display: none;">Cargar más resultados</button>
+            <button id="loadMoreBtn" onclick="loadMorePlaces()" style="display: none;">
+                Cargar más resultados
+            </button>
         </div>
 
         <div id="map"></div>
 
     </div>
 
-    <script src="frontend/app.js"></script>
+    <script src="app.js"></script>
+
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsUyVutW8T5Y0V7v69e5xS_F9zJ2b5qG0&callback=initMap" async defer></script>
 </body>
 </html>
