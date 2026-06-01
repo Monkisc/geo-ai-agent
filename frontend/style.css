@@ -1,135 +1,171 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ==========================================================================
+   VARIABLES DE COLORES - PALETA OFICIAL DE GOOGLE
+   ========================================================================== */
+:root {
+    --google-blue: #1a73e8;
+    --google-blue-light: #e8f0fe;
+    --google-blue-dark: #1557b0;
+    --google-red: #ea4335;
+    --google-yellow: #fbbc05;
+    --google-green: #34a853;
+    --text-primary: #202124;
+    --text-secondary: #5f6368;
+    --bg-light: #f8f9fa;
+    --border-color: #dadce0;
+    --shadow-subtle: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+    --shadow-hover: 0 4px 6px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+    --font-main: 'Product Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* ==========================================================================
+   ESTILOS GENERALES Y TIPOGRAFÍA
+   ========================================================================== */
 body {
-  background: #0b1220;
-  color: white;
-  font-family: Arial, sans-serif;
+    font-family: var(--font-main);
+    color: var(--text-primary);
+    background-color: #ffffff;
+    margin: 0;
+    padding: 20px;
 }
 
-.app {
-  min-height: 100vh;
+h1, h2, h3 {
+    color: var(--text-primary);
+    font-weight: 500;
 }
 
-.hero {
-  padding: 40px;
-  text-align: center;
-
-  background:
-    linear-gradient(
-      135deg,
-      #132238,
-      #1d3557
-    );
+/* ==========================================================================
+   ESTRUCTURA PRINCIPAL (LAYOUT 70/30)
+   ========================================================================== */
+.main-container {
+    display: flex;
+    gap: 24px;
+    width: 100%;
+    height: 78vh;
+    margin-top: 15px;
 }
 
-.hero h1 {
-  font-size: 52px;
-  margin-bottom: 10px;
+/* Sección de la izquierda: Resultados de Leads */
+#results-section {
+    flex: 7; /* Ocupa el 70% del ancho */
+    overflow-y: auto;
+    padding-right: 10px;
 }
 
-.hero p {
-  opacity: 0.7;
-  margin-bottom: 30px;
-}
-
-.search-box {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.search-box input {
-  width: 500px;
-  padding: 16px;
-
-  border-radius: 12px;
-  border: none;
-
-  font-size: 16px;
-}
-
-.search-box button {
-  padding: 16px 28px;
-
-  border: none;
-  border-radius: 12px;
-
-  background: #00bfff;
-  color: white;
-
-  cursor: pointer;
-  font-weight: bold;
-
-  transition: 0.3s;
-}
-#downloadBtn{
-
-    width:100%;
-    margin-bottom:20px;
-    padding:12px;
-    border:none;
-    background:#34A853;
-    color:white;
-    border-radius:10px;
-    cursor:pointer;
-    font-weight:bold;
-    font-size:15px;
-}
-
-.search-box button:hover {
-  transform: scale(1.05);
-}
-
-.content {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-
-  height: calc(100vh - 220px);
-}
-
+/* Sección de la derecha: El mapa dinámico */
 #map {
-  width: 100%;
-  height: 100%;
+    flex: 3; /* Ocupa el 30% del ancho */
+    height: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 2px 0 rgba(60,64,67,0.1);
 }
 
-#results {
-  overflow-y: auto;
-  padding: 20px;
-
-  background: #111827;
+/* Ocultar barra de scroll interna pero mantener la función de deslizar */
+#results-section::-webkit-scrollbar {
+    width: 6px;
+}
+#results-section::-webkit-scrollbar-track {
+    background: transparent;
+}
+#results-section::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
 }
 
-.card {
-  background: #1f2937;
-
-  padding: 20px;
-  margin-bottom: 16px;
-
-  border-radius: 18px;
-
-  transition: 0.3s;
-
-  border: 1px solid rgba(255,255,255,0.05);
+/* ==========================================================================
+   TARJETAS DE LEADS (PLACE CARDS STYLE)
+   ========================================================================== */
+.place-card {
+    background: #ffffff;
+    padding: 20px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
-.card:hover {
-  transform: translateY(-5px);
+/* Efecto hover suave al pasar el mouse */
+.place-card:hover {
+    background-color: var(--bg-light);
+    border-color: #b0b3b8;
+    box-shadow: 0 1px 3px 0 rgba(60,64,67,0.2);
 }
 
-.card h3 {
-  margin-bottom: 10px;
+.place-card h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.15rem;
+    color: var(--google-blue);
 }
 
-.card p {
-  margin-bottom: 8px;
-  opacity: 0.8;
+.place-card p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 8px 0;
+    line-height: 1.4;
 }
 
-.card a {
-  color: #00bfff;
-  text-decoration: none;
+.place-card strong {
+    color: var(--text-primary);
+}
+
+/* Enlaces limpios sin el molesto subrayado azul genérico */
+.place-card a {
+    color: var(--google-blue-dark);
+    text-decoration: none;
+    font-weight: 500;
+}
+.place-card a:hover {
+    text-decoration: underline;
+}
+
+/* Resaltador del correo electrónico real */
+.email-highlight {
+    color: var(--google-green) !important;
+    font-weight: 500;
+    background-color: #e6f4ea;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 2px;
+}
+
+/* CLASE DINÁMICA: Se activa al seleccionar la tarjeta o hacer clic en el mapa */
+.active-card {
+    border-left: 6px solid var(--google-blue) !important;
+    background-color: var(--google-blue-light) !important;
+    border-color: #aecbfa !important;
+    box-shadow: var(--shadow-subtle) !important;
+}
+
+.active-card h3 {
+    color: var(--google-blue-dark);
+}
+
+/* ==========================================================================
+   BLOQUES ADICIONALES: ANÁLISIS DE IA
+   ========================================================================== */
+#analysis {
+    background-color: #fef7e0; /* Color sutil arena/amarillo de Google Keep */
+    border: 1px solid #feefc3;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+}
+
+#analysis h2 {
+    margin-top: 0;
+    font-size: 1.1rem;
+    color: #b06000; /* Texto de alerta/análisis elegante */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#analysis p {
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin: 0;
 }
