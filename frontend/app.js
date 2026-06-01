@@ -5,7 +5,7 @@ let nextPageToken = null;
 let allPlaces = [];
 let currentPage = 1;
 
-const placesPerPage = 5;
+const placesPerPage = 15;
 
 // ===============================
 // INICIAR MAPA
