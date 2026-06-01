@@ -6,9 +6,7 @@ let currentPage = 1;
 
 const placesPerPage = 25; 
 
-// ===============================
-// INICIAR MAPA
-// ===============================
+// INICIAR MAPA EN COORDENADAS POR DEFECTO
 function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 4.7110, lng: -74.0721 },
@@ -23,17 +21,13 @@ function initMap() {
     });
 }
 
-// ===============================
-// LIMPIAR MARCADORES
-// ===============================
+// LIMPIAR MARCADORES ANTERIORES
 function clearMarkers() {
     markers.forEach(marker => marker.setMap(null));
     markers = [];
 }
 
-// ===============================
-// RENDERIZAR RESULTADOS E INTERACTIVIDAD
-// ===============================
+// RENDERIZAR TARJETAS Y COORDENADAS EN EL MAPA
 function renderPlaces() {
     const resultsContainer = document.getElementById("results");
     resultsContainer.innerHTML = "";
@@ -50,8 +44,10 @@ function renderPlaces() {
         const name = place.name || "Sin nombre";
         const website = place.website || "Sin sitio web";
         const errorsOrEmails = place.emails?.length ? place.emails.join(", ") : "Sin emails";
-        const lat = place.lat;
-        const lng = place.lng;
+        
+        // CORRECCIÓN CLAVE: Extraemos lat/lng tolerando variaciones del backend (Geometry u objeto plano)
+        let lat = place.lat || place.geometry?.location?.lat;
+        let lng = place.lng || place.geometry?.location?.lng;
 
         const cardId = `card-${index}`;
 
@@ -60,59 +56,59 @@ function renderPlaces() {
         card.id = cardId;
         card.innerHTML = `
             <h3>${name}</h3>
-            <p>
-                <strong>Sitio Web:</strong><br>
-                <a href="${website}" target="_blank">${website}</a>
-            </p>
+            <p><strong>Sitio Web:</strong><br><a href="${website}" target="_blank">${website}</a></p>
             <p><strong>Emails Reales Encontrados:</strong><br><span class="email-highlight">${errorsOrEmails}</span></p>
         `;
 
         resultsContainer.appendChild(card);
 
-        if (lat && lng) {
-            const markerPosition = { lat: parseFloat(lat), lng: parseFloat(lng) };
+        // Validar que las coordenadas existan y sean números correctos
+        if (lat !== undefined && lng !== undefined) {
+            const parsedLat = parseFloat(lat);
+            const parsedLng = parseFloat(lng);
 
-            const marker = new google.maps.Marker({
-                position: markerPosition,
-                map: map,
-                title: name,
-                label: (index + 1).toString(),
-                animation: google.maps.Animation.DROP
-            });
+            if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+                const markerPosition = { lat: parsedLat, lng: parsedLng };
 
-            const infowindow = new google.maps.InfoWindow({
-                content: `
-                    <div style="color: #333; padding: 4px; font-family: sans-serif;">
-                        <strong style="font-size: 13px;">${name}</strong>
-                    </div>
-                `
-            });
+                const marker = new google.maps.Marker({
+                    position: markerPosition,
+                    map: map,
+                    title: name,
+                    label: (index + 1).toString(),
+                    animation: google.maps.Animation.DROP
+                });
 
-            marker.addListener("click", () => {
-                infowindow.open(map, marker);
-                document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active-card"));
-                const targetCard = document.getElementById(cardId);
-                if (targetCard) {
-                    targetCard.classList.add("active-card");
-                    targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
-                }
-            });
+                const infowindow = new google.maps.InfoWindow({
+                    content: `<div style="color: #333; padding: 4px; font-family: sans-serif;"><strong style="font-size: 13px;">${name}</strong></div>`
+                });
 
-            card.addEventListener("click", () => {
-                document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active-card"));
-                card.classList.add("active-card");
-                map.setCenter(markerPosition);
-                map.setZoom(16);
-                infowindow.open(map, marker);
-            });
+                marker.addListener("click", () => {
+                    infowindow.open(map, marker);
+                    document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active-card"));
+                    const targetCard = document.getElementById(cardId);
+                    if (targetCard) {
+                        targetCard.classList.add("active-card");
+                        targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }
+                });
 
-            markers.push(marker);
-            bounds.extend(markerPosition);
-            hasMarkers = true;
+                card.addEventListener("click", () => {
+                    document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active-card"));
+                    card.classList.add("active-card");
+                    map.setCenter(markerPosition);
+                    map.setZoom(16);
+                    infowindow.open(map, marker);
+                });
+
+                markers.push(marker);
+                bounds.extend(markerPosition);
+                hasMarkers = true;
+            }
         }
     });
 
-    if (hasMarkers) {
+    // Ajustar la cámara para que encuadre todos los pines automáticamente
+    if (hasMarkers && map) {
         map.fitBounds(bounds);
     }
 
@@ -126,9 +122,7 @@ function renderPlaces() {
     }
 }
 
-// ===============================
-// BUSCAR LUGARES
-// ===============================
+// SOLICITUD AL BACKEND EN CLOUD RUN
 async function searchPlaces(loadMore = false) {
     const queryInput = document.getElementById("searchInput");
     if (!queryInput) return;
@@ -159,9 +153,11 @@ async function searchPlaces(loadMore = false) {
         if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
 
         const data = await response.json();
-        const places = data.places.results || [];
+        
+        // Mapeo flexible de la respuesta del backend
+        const places = data.places?.results || data.places || [];
 
-        nextPageToken = data.places.next_page_token || null;
+        nextPageToken = data.places?.next_page_token || null;
         allPlaces = [...allPlaces, ...places];
 
         renderPlaces();
