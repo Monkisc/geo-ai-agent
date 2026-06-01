@@ -144,7 +144,7 @@ def ask_agent(user_query, page_token=None):
 
     transformed_results = []
     
-    for p in raw_results[:5]:
+    for p in raw_results[:15]:
         geometry = p.get("geometry", {})
         location = geometry.get("location", {})
         
