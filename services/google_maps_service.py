@@ -60,7 +60,7 @@ def search_places(query, page_token=None):
         raw_results = data.get("results", [])
 
         # CORRECCIÓN AQUÍ: Cambiamos el límite de [:5] a [:10] para que procese el paquete completo
-        limit = min(10, len(raw_results))
+        limit = min(25, len(raw_results))
 
         for i in range(limit):
             place = raw_results[i]
