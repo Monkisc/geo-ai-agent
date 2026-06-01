@@ -20,7 +20,6 @@ body {
     box-sizing: border-box;
 }
 
-/* Panel Superior */
 .search-panel {
     display: flex;
     gap: 12px;
@@ -36,7 +35,6 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     outline: none;
-    transition: border-color 0.2s;
 }
 
 .search-panel input:focus {
@@ -51,7 +49,6 @@ body {
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.2s;
 }
 
 .search-panel button:first-of-type {
@@ -59,20 +56,11 @@ body {
     color: white;
 }
 
-.search-panel button:first-of-type:hover {
-    background-color: var(--google-blue-dark);
-}
-
 #downloadBtn {
     background-color: var(--google-green);
     color: white;
 }
 
-#downloadBtn:hover {
-    background-color: var(--google-green-dark);
-}
-
-/* DISEÑO DE COLUMNAS LAYOUT 70/30 */
 .main-container {
     display: flex;
     gap: 24px;
@@ -81,20 +69,19 @@ body {
 }
 
 #results-section {
-    flex: 7; /* Ocupa el 70% de la pantalla */
+    flex: 7;
     overflow-y: auto;
     padding-right: 8px;
 }
 
 #map {
-    flex: 3; /* Ocupa el 30% de la pantalla */
+    flex: 3;
     height: 100%;
     border-radius: 12px;
     border: 1px solid var(--border-color);
     box-shadow: 0 1px 3px rgba(60,64,67,0.1);
 }
 
-/* Scroll Bar Elegante */
 #results-section::-webkit-scrollbar {
     width: 6px;
 }
@@ -103,7 +90,6 @@ body {
     border-radius: 4px;
 }
 
-/* Tarjetas de Leads */
 .place-card {
     background: #ffffff;
     padding: 20px;
@@ -117,7 +103,6 @@ body {
 .place-card:hover {
     background-color: var(--bg-light);
     border-color: #b0b3b8;
-    box-shadow: 0 1px 3px rgba(60,64,67,0.15);
 }
 
 .place-card h3 {
@@ -130,17 +115,12 @@ body {
     font-size: 0.9rem;
     color: var(--text-secondary);
     margin: 8px 0;
-    line-height: 1.4;
 }
 
 .place-card a {
     color: var(--google-blue-dark);
     text-decoration: none;
     font-weight: 500;
-}
-
-.place-card a:hover {
-    text-decoration: underline;
 }
 
 .email-highlight {
@@ -150,10 +130,8 @@ body {
     padding: 4px 8px;
     border-radius: 4px;
     display: inline-block;
-    margin-top: 4px;
 }
 
-/* Tarjeta Activa (Seleccionada) */
 .active-card {
     border-left: 6px solid var(--google-blue) !important;
     background-color: var(--google-blue-light) !important;
@@ -173,10 +151,6 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     cursor: pointer;
-    font-weight: 500;
-}
-#loadMoreBtn:hover {
-    background: #edf0f2;
 }
 
 #analysis {
@@ -190,9 +164,4 @@ body {
     margin: 0 0 8px 0;
     font-size: 1.05rem;
     color: #b06000;
-}
-#analysis p {
-    font-size: 0.9rem;
-    margin: 0;
-    line-height: 1.4;
 }

@@ -55,7 +55,6 @@ function renderPlaces() {
 
         const cardId = `card-${index}`;
 
-        // Construir Tarjeta
         const card = document.createElement("div");
         card.className = "place-card";
         card.id = cardId;
@@ -70,7 +69,6 @@ function renderPlaces() {
 
         resultsContainer.appendChild(card);
 
-        // Control del Marcador en el Mapa
         if (lat && lng) {
             const markerPosition = { lat: parseFloat(lat), lng: parseFloat(lng) };
 
@@ -82,19 +80,14 @@ function renderPlaces() {
                 animation: google.maps.Animation.DROP
             });
 
-            // FIXED: Corregido el símbolo $ faltante en la URL del InfoWindow para evitar el colapso del mapa
             const infowindow = new google.maps.InfoWindow({
                 content: `
-                    <div style="color: #333; padding: 4px;">
-                        <strong style="font-size: 13px;">${name}</strong><br><br>
-                        <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lng}" target="_blank" style="color: #1a73e8; font-size: 12px; font-weight: 500; text-decoration: none;">
-                            ¿Cómo llegar? →
-                        </a>
+                    <div style="color: #333; padding: 4px; font-family: sans-serif;">
+                        <strong style="font-size: 13px;">${name}</strong>
                     </div>
                 `
             });
 
-            // Al hacer clic en el pin del mapa -> Resalta e inclina la tarjeta de la izquierda
             marker.addListener("click", () => {
                 infowindow.open(map, marker);
                 document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active-card"));
@@ -105,7 +98,6 @@ function renderPlaces() {
                 }
             });
 
-            // Al hacer clic en la tarjeta izquierda -> Mueve y enfoca el mapa en el pin
             card.addEventListener("click", () => {
                 document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active-card"));
                 card.classList.add("active-card");
@@ -135,7 +127,7 @@ function renderPlaces() {
 }
 
 // ===============================
-// BUSCAR LUGARES (BACKEND CONNECT)
+// BUSCAR LUGARES
 // ===============================
 async function searchPlaces(loadMore = false) {
     const queryInput = document.getElementById("searchInput");
