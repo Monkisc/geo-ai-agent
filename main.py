@@ -6,10 +6,11 @@ print("--- INICIANDO CAPTURA DE ARRANQUE ---")
 try:
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
-    
-    # Aquí es donde sospecho que se está rompiendo (en las importaciones)
+    from pydantic import BaseModel
+    from typing import List
+
     print("Cargando agentes y servicios...")
-    from agents.geo_agent import ask_agent
+    from agents.geo_agent import ask_agent, enrich_places
     print("¡Módulos cargados con éxito!")
 
     app = FastAPI()
@@ -26,10 +27,20 @@ try:
     def root():
         return {"status": "ok"}
 
+    # Endpoint 1: Búsqueda rápida, sin emails
     @app.get("/search")
     def search(query: str, page_token: str = None):
         result = ask_agent(query, page_token)
         return result
+
+    # Endpoint 2: Enriquecer con emails
+    class EnrichRequest(BaseModel):
+        places: List[dict]
+
+    @app.post("/enrich")
+    def enrich(body: EnrichRequest):
+        enriched = enrich_places(body.places)
+        return {"places": enriched}
 
 except Exception as e:
     print("\n" + "="*50)
@@ -38,6 +49,6 @@ except Exception as e:
     import traceback
     traceback.print_exc()
     print("="*50 + "\n")
-    # Forzamos una salida limpia pero dejamos el log escrito
     sys.exit(1)
+
     

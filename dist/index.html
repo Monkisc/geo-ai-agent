@@ -9,24 +9,22 @@
 <body>
 
     <div class="search-panel">
-        <input type="text" id="searchInput" placeholder="Ej: colegios Madrid cundinamarca">
-        <button onclick="searchPlaces()">Buscar</button>
-        <button id="downloadBtn" onclick="downloadCSV()">Descargar CSV</button>
-    </div>
+    <input type="text" id="queryInput" placeholder="¿Qué buscas? (ej: colegios)">
+    <input type="text" id="locationInput" placeholder="¿Dónde? (ej: Bogotá, Colombia)">
+    <button onclick="searchPlaces()">Buscar</button>
+    <button id="downloadBtn" onclick="downloadCSV()">Descargar CSV</button>
+</div>
+
 
     <div class="main-container">
         
         <div id="results-section">
-            <div id="analysis">
-                <h2>Análisis de Prospección IA</h2>
-                <p>Realiza una búsqueda para activar el análisis predictivo de canales digitales.</p>
-            </div>
-            
+        
             <div id="results">
                 <p class="placeholder-text">Escribe tu búsqueda arriba para rastrear leads y correos reales...</p>
             </div>
             
-            <button id="loadMoreBtn" onclick="loadMorePlaces()" style="display: none;">
+            <button id="loadMoreBtn" onclick="loadMorePlaces()" class="hidden-btn">
                 Cargar más resultados
             </button>
         </div>
@@ -36,7 +34,7 @@
     </div>
 
     <script src="app.js"></script>
-
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsUyVutW8T5Y0V7v69e5xS_F9zJ2b5qG0&callback=initMap&loading=async" defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAsUyVuTHPgQ-8OR8DvYLyGbbxDkkiShP8&callback=initMap&loading=async" defer></script>
 </body>
 </html>
+

@@ -1,175 +1,215 @@
+const BACKEND = "https://geo-ai-agent-605558562484.us-central1.run.app";
+
 let map;
 let markers = [];
 let nextPageToken = null;
 let allPlaces = [];
-let currentPage = 1;
+let activeInfoWindow = null;
 
-const placesPerPage = 25; 
-
-// INICIAR MAPA EN COORDENADAS POR DEFECTO
+// ==============================
+// INICIAR MAPA
+// ==============================
 function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: 4.7110, lng: -74.0721 },
         zoom: 12,
-        styles: [
-            {
-                featureType: "poi.business",
-                elementType: "labels",
-                stylers: [{ visibility: "off" }]
-            }
-        ]
+        styles: [{ featureType: "poi.business", elementType: "labels", stylers: [{ visibility: "off" }] }]
     });
 }
 
-// LIMPIAR MARCADORES ANTERIORES
+// ==============================
+// LIMPIAR MARCADORES
+// ==============================
 function clearMarkers() {
-    markers.forEach(marker => marker.setMap(null));
+    markers.forEach(m => m.setMap(null));
     markers = [];
+    if (activeInfoWindow) { activeInfoWindow.close(); activeInfoWindow = null; }
 }
 
-// RENDERIZAR TARJETAS Y COORDENADAS EN EL MAPA
+// ==============================
+// RENDERIZAR RESULTADOS
+// ==============================
 function renderPlaces() {
-    const resultsContainer = document.getElementById("results");
-    resultsContainer.innerHTML = "";
-
-    const end = currentPage * placesPerPage;
-    const visiblePlaces = allPlaces.slice(0, end);
+    const container = document.getElementById("results");
+    container.innerHTML = "";
 
     const bounds = new google.maps.LatLngBounds();
     let hasMarkers = false;
 
     clearMarkers();
 
-    visiblePlaces.forEach((place, index) => {
-        const name = place.name || "Sin nombre";
+    allPlaces.forEach((place, index) => {
+        const name    = place.name || "Sin nombre";
         const website = place.website || "Sin sitio web";
-        const errorsOrEmails = place.emails?.length ? place.emails.join(", ") : "Sin emails";
-        
-        // CORRECCIÓN CLAVE: Extraemos lat/lng tolerando variaciones del backend (Geometry u objeto plano)
-        let lat = place.lat || place.geometry?.location?.lat;
-        let lng = place.lng || place.geometry?.location?.lng;
 
-        const cardId = `card-${index}`;
+        const rawEmails = place.emails || [];
+        const cleanEmails = [...new Set(
+            rawEmails
+                .map(e => { const m = e.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/); return m ? m[0] : ""; })
+                .filter(e => e !== "")
+        )];
+        const emailsHtml = cleanEmails.length
+            ? cleanEmails.map(e => `<span class="email-highlight">${e}</span>`).join("<br>")
+            : `<span class="loading-emails" id="email-${index}">⏳ Buscando emails...</span>`;
 
         const card = document.createElement("div");
         card.className = "place-card";
-        card.id = cardId;
+        card.id = `card-${index}`;
         card.innerHTML = `
-            <h3>${name}</h3>
-            <p><strong>Sitio Web:</strong><br><a href="${website}" target="_blank">${website}</a></p>
-            <p><strong>Emails Reales Encontrados:</strong><br><span class="email-highlight">${errorsOrEmails}</span></p>
+            <h3><span class="place-number">${index + 1}</span> ${name}</h3>
+            <p><strong>Sitio Web:</strong><br>
+                ${website !== "Sin sitio web"
+                    ? `<a href="${website}" target="_blank">${website}</a>`
+                    : "Sin sitio web"}
+            </p>
+            <p><strong>Emails Encontrados:</strong><br>${emailsHtml}</p>
         `;
+        container.appendChild(card);
 
-        resultsContainer.appendChild(card);
+        const lat = place.lat;
+        const lng = place.lng;
 
-        // Validar que las coordenadas existan y sean números correctos
-        if (lat !== undefined && lng !== undefined) {
-            const parsedLat = parseFloat(lat);
-            const parsedLng = parseFloat(lng);
+        if (lat && lng) {
+            const pos = { lat: parseFloat(lat), lng: parseFloat(lng) };
 
-            if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
-                const markerPosition = { lat: parsedLat, lng: parsedLng };
+            const marker = new google.maps.Marker({
+                position: pos,
+                map: map,
+                title: name,
+                label: { text: (index + 1).toString(), color: "white", fontWeight: "bold" },
+                animation: google.maps.Animation.DROP
+            });
 
-                const marker = new google.maps.Marker({
-                    position: markerPosition,
-                    map: map,
-                    title: name,
-                    label: (index + 1).toString(),
-                    animation: google.maps.Animation.DROP
-                });
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div style="max-width:220px;font-family:sans-serif;">
+                        <strong>${name}</strong><br>
+                        ${website !== "Sin sitio web"
+                            ? `<a href="${website}" target="_blank" style="color:#1a73e8;font-size:12px;">${website}</a>`
+                            : '<span style="color:#999;font-size:12px;">Sin sitio web</span>'}
+                    </div>`
+            });
 
-                const infowindow = new google.maps.InfoWindow({
-                    content: `<div style="color: #333; padding: 4px; font-family: sans-serif;"><strong style="font-size: 13px;">${name}</strong></div>`
-                });
+            card.addEventListener("click", () => {
+                map.setZoom(16); map.panTo(pos);
+                if (activeInfoWindow) activeInfoWindow.close();
+                infoWindow.open(map, marker);
+                activeInfoWindow = infoWindow;
+                document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active"));
+                card.classList.add("active");
+            });
 
-                marker.addListener("click", () => {
-                    infowindow.open(map, marker);
-                    document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active-card"));
-                    const targetCard = document.getElementById(cardId);
-                    if (targetCard) {
-                        targetCard.classList.add("active-card");
-                        targetCard.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }
-                });
+            marker.addListener("click", () => {
+                map.setZoom(16); map.panTo(pos);
+                if (activeInfoWindow) activeInfoWindow.close();
+                infoWindow.open(map, marker);
+                activeInfoWindow = infoWindow;
+                document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active"));
+                card.classList.add("active");
+                card.scrollIntoView({ behavior: "smooth", block: "center" });
+            });
 
-                card.addEventListener("click", () => {
-                    document.querySelectorAll(".place-card").forEach(c => c.classList.remove("active-card"));
-                    card.classList.add("active-card");
-                    map.setCenter(markerPosition);
-                    map.setZoom(16);
-                    infowindow.open(map, marker);
-                });
-
-                markers.push(marker);
-                bounds.extend(markerPosition);
-                hasMarkers = true;
-            }
+            markers.push(marker);
+            bounds.extend(pos);
+            hasMarkers = true;
         }
     });
 
-    // Ajustar la cámara para que encuadre todos los pines automáticamente
-    if (hasMarkers && map) {
-        map.fitBounds(bounds);
-    }
+    if (hasMarkers && map) map.fitBounds(bounds);
+    updateLoadMoreBtn();
+}
 
-    const loadMoreBtn = document.getElementById("loadMoreBtn");
-    if (loadMoreBtn) {
-        if (end < allPlaces.length || nextPageToken) {
-            loadMoreBtn.style.display = "block";
-        } else {
-            loadMoreBtn.style.display = "none";
-        }
+// ==============================
+// ENRIQUECER CON EMAILS (2do paso)
+// ==============================
+async function enrichPlaces(places, startIndex) {
+    try {
+        const response = await fetch(`${BACKEND}/enrich`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ places })
+        });
+        const data = await response.json();
+        const enriched = data.places || [];
+
+        enriched.forEach((place, i) => {
+            const globalIndex = startIndex + i;
+            allPlaces[globalIndex] = { ...allPlaces[globalIndex], ...place };
+
+            // Actualizar emails en la tarjeta ya renderizada
+            const emailSpan = document.getElementById(`email-${globalIndex}`);
+            if (emailSpan) {
+                const rawEmails = place.emails || [];
+                const cleanEmails = [...new Set(
+                    rawEmails
+                        .map(e => { const m = e.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/); return m ? m[0] : ""; })
+                        .filter(e => e !== "")
+                )];
+                emailSpan.outerHTML = cleanEmails.length
+                    ? cleanEmails.map(e => `<span class="email-highlight">${e}</span>`).join("<br>")
+                    : "Sin emails";
+            }
+
+            // Actualizar website en la tarjeta si llegó vacío antes
+            if (place.website && place.website !== "Sin sitio web") {
+                const card = document.getElementById(`card-${globalIndex}`);
+                if (card) {
+                    const webP = card.querySelector("p:nth-child(2)");
+                    if (webP && webP.textContent.includes("Sin sitio web")) {
+                        webP.innerHTML = `<strong>Sitio Web:</strong><br><a href="${place.website}" target="_blank">${place.website}</a>`;
+                    }
+                }
+            }
+        });
+
+    } catch (e) {
+        console.error("[enrichPlaces] Error:", e);
     }
 }
 
-// SOLICITUD AL BACKEND EN CLOUD RUN
+// ==============================
+// BUSCAR
+// ==============================
 async function searchPlaces(loadMore = false) {
-    const queryInput = document.getElementById("searchInput");
-    if (!queryInput) return;
+    const queryInput    = document.getElementById("queryInput");
+    const locationInput = document.getElementById("locationInput");
+    if (!queryInput || !locationInput) return;
 
-    const query = queryInput.value.trim();
-    if (!query) {
-        alert("Escribe una búsqueda");
+    const query    = queryInput.value.trim();
+    const location = locationInput.value.trim();
+
+    if (!query || !location) {
+        alert("Por favor, escribe qué buscas y dónde.");
         return;
     }
 
-    try {
-        const resultsContainer = document.getElementById("results");
+    const fullQuery = `${query} en ${location}`;
 
+    try {
         if (!loadMore) {
-            resultsContainer.innerHTML = `<p>Buscando lugares y escaneando correos reales...</p>`;
+            document.getElementById("results").innerHTML = `<p>Buscando...</p>`;
             clearMarkers();
             allPlaces = [];
-            currentPage = 1;
+            nextPageToken = null;
         }
 
-        let url = `https://geo-ai-agent-605558562484.us-central1.run.app/search?query=${encodeURIComponent(query)}`;
-
-        if (loadMore && nextPageToken) {
-            url += `&page_token=${nextPageToken}`;
-        }
+        let url = `${BACKEND}/search?query=${encodeURIComponent(fullQuery)}`;
+        if (loadMore && nextPageToken) url += `&page_token=${encodeURIComponent(nextPageToken)}`;
 
         const response = await fetch(url);
-        if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-
-        const data = await response.json();
-        
-        // Mapeo flexible de la respuesta del backend
-        const places = data.places?.results || data.places || [];
+        const data     = await response.json();
+        const places   = data.places?.results || [];
 
         nextPageToken = data.places?.next_page_token || null;
+
+        const startIndex = allPlaces.length;
         allPlaces = [...allPlaces, ...places];
 
         renderPlaces();
 
-        if (!loadMore && data.analysis) {
-            const analysisDiv = document.getElementById("analysis");
-            if (analysisDiv) {
-                analysisDiv.innerHTML = `
-                    <h2>Análisis de Prospección IA</h2>
-                    <p>${data.analysis}</p>
-                `;
-            }
+        // Enriquecer con emails en segundo plano
+        if (places.length > 0) {
+            enrichPlaces(places, startIndex);
         }
 
     } catch (error) {
@@ -178,46 +218,48 @@ async function searchPlaces(loadMore = false) {
     }
 }
 
-async function loadMorePlaces() {
-    const visible = currentPage * placesPerPage;
-    if (visible < allPlaces.length) {
-        currentPage++;
-        renderPlaces();
-        return;
-    }
-    if (nextPageToken) {
-        await searchPlaces(true);
-        currentPage++;
-        renderPlaces();
-    }
+// ==============================
+// CARGAR MÁS
+// ==============================
+function loadMorePlaces() {
+    console.log("loadMorePlaces llamado, token:", nextPageToken);
+    if (nextPageToken) searchPlaces(true);
 }
 
+function updateLoadMoreBtn() {
+    const btn = document.getElementById("loadMoreBtn");
+    if (!btn) return;
+    btn.classList.toggle("hidden-btn", !nextPageToken);
+}
+
+// ==============================
+// EXPORTAR CSV
+// ==============================
 function downloadCSV() {
-    if (allPlaces.length === 0) {
-        alert("No hay resultados para descargar");
-        return;
-    }
-    let csv = "Nombre de la Empresa/Colegio,Sitio Web,Emails Encontrados\n";
+    if (allPlaces.length === 0) return alert("No hay resultados");
+
+    let csv = "Nombre,Sitio Web,Emails\n";
     allPlaces.forEach(place => {
-        const name = (place.name || "Sin nombre").replace(/"/g, '""');
+        const name    = (place.name || "Sin nombre").replace(/"/g, '""');
         const website = (place.website || "Sin sitio web").replace(/"/g, '""');
-        const emails = (place.emails?.length ? place.emails.join(" | ") : "Sin emails").replace(/"/g, '""');
+        const raw     = place.emails || [];
+        const clean   = [...new Set(raw.map(e => {
+            const m = e.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+            return m ? m[0] : "";
+        }).filter(e => e !== ""))];
+        const emails  = (clean.length ? clean.join(" | ") : "Sin emails").replace(/"/g, '""');
         csv += `"${name}","${website}","${emails}"\n`;
     });
+
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "leads_digitales.csv";
+    const a    = document.createElement("a");
+    a.href     = window.URL.createObjectURL(blob);
+    a.download = "leads.csv";
     a.click();
-    window.URL.revokeObjectURL(url);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    const input = document.getElementById("searchInput");
-    if (input) {
-        input.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") searchPlaces();
-        });
-    }
+    const input = document.getElementById("queryInput");
+    if (input) input.addEventListener("keypress", e => { if (e.key === "Enter") searchPlaces(); });
 });
+
